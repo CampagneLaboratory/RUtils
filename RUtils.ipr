@@ -2,6 +2,16 @@
 <project relativePaths="true" version="4">
   <component name="AntConfiguration">
     <defaultAnt bundledAnt="true" />
+    <buildFile url="file://$PROJECT_DIR$/build.xml">
+      <additionalClassPath />
+      <antReference projectDefault="true" />
+      <customJdkName value="" />
+      <maximumHeapSize value="128" />
+      <properties />
+      <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="RUtils" />
+      <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="Rserve" />
+      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionFactory.getConnection" />
+    </buildFile>
   </component>
   <component name="BuildJarProjectSettings">
     <option name="BUILD_JARS_ON_MAKE" value="false" />
@@ -26,6 +36,14 @@
     <option name="CHANGE_AFTER" value="" />
     <option name="USE_USER_FILTER" value="false" />
     <option name="USER" value="" />
+  </component>
+  <component name="CheckStyle-IDEA">
+    <option name="configuration">
+      <map>
+        <entry key="config-file" value="$PROJECT_DIR$/../RUtils\testsupport\checkstyle\config\icb_checks.xml" />
+        <entry key="property.checkstyle.basedir" value="$PROJECT_DIR$/../RUtils\testsupport\checkstyle" />
+      </map>
+    </option>
   </component>
   <component name="CodeStyleProjectProfileManger">
     <option name="PROJECT_PROFILE" />
@@ -54,6 +72,7 @@
       <entry name="?*.tld" />
     </wildcardResourcePatterns>
   </component>
+  <component name="CppTools.Loader" reportImplicitCastToBool="false" version="1" />
   <component name="Cvs2Configuration">
     <option name="PRUNE_EMPTY_DIRECTORIES" value="true" />
     <option name="MERGING_MODE" value="0" />
@@ -717,10 +736,6 @@
     <mapping directory="" vcs="svn" />
   </component>
   <component name="WebServicesPlugin" addRequiredLibraries="true" />
-  <component name="antWorkspaceConfiguration">
-    <option name="IS_AUTOSCROLL_TO_SOURCE" value="false" />
-    <option name="FILTER_TARGETS" value="false" />
-  </component>
   <component name="com.intellij.ide.util.scopeChooser.ScopeChooserConfigurable" proportions="" version="1">
     <option name="myLastEditedConfigurable" />
   </component>
