@@ -107,13 +107,21 @@ class RUtils {
 
     /**
      * Can be used to shut down a running rserve instance.
+     * @param host Host where the command should be sent
+     * @param port Port number where the command should be sent
      * @throws RserveException if the process cannot be shutdown properly
      */
-    void shutdown() throws RserveException {
-        LOG.info("Attempting to shutdown");
-        final RConnection rConnection = new RConnection();
+    void shutdown(final String host, final int port) throws RserveException {
+        if (LOG.isInfoEnabled()) {
+            LOG.info("Attempting to shutdown Rserve on " + host + ":" + port);
+        }
+
+        final RConnection rConnection = new RConnection(host, port);
         rConnection.shutdown();
-        LOG.info("Shutdown message sent");
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("Shutdown message sent");
+        }
     }
 
     /**
@@ -136,14 +144,29 @@ class RUtils {
                 new Option("s", "shutdown", false, "Shutdown a running Rserve process");
         options.addOption(shutdownOption);
 
+        final Option portOption =
+                new Option("port", "port", true, "Use specified port to communicate with the Rserve process");
+        portOption.setArgName("port");
+        portOption.setType(int.class);
+        options.addOption(portOption);
+
+        final Option hostOption =
+                new Option("host", "host", true, "communicate with the Rserve process on the given host");
+        hostOption.setArgName("hostname");
+        hostOption.setType(String.class);
+        options.addOption(hostOption);
+
         final Parser parser = new BasicParser();
         final CommandLine commandLine = parser.parse(options, args);
 
-        if (commandLine.hasOption("help")) {
+        final int port = Integer.valueOf(commandLine.getOptionValue("port", "6311"));
+        final String host = commandLine.getOptionValue("host", "localhost");
+
+        if (commandLine.hasOption("h")) {
             usage(options);
         } else if (commandLine.hasOption("shutdown")) {
             final RUtils rUtils = new RUtils();
-            rUtils.shutdown();
+            rUtils.shutdown(host, port);
         } else {
             usage(options);
         }
