@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2008 sp1 (http://www.altova.com) by Marko Srdanovic (Institute for Computational Biomedicine) -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:element name="RConnectionPool">
+		<xs:annotation>
+			<xs:documentation>Defines characteristics of a pool of RServe instances that a client may connect to</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="RServer" maxOccurs="unbounded">
+					<xs:complexType>
+						<xs:attribute name="host" type="xs:string" use="required">
+							<xs:annotation>
+								<xs:documentation>The host/ip Rserve is running on.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="port" type="xs:integer" default="6311">
+							<xs:annotation>
+								<xs:documentation>The TCP port Rserve is listening on.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="username" type="xs:string">
+							<xs:annotation>
+								<xs:documentation>Username to suppy for the connection.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="password">
+							<xs:annotation>
+								<xs:documentation>Password to supply for the connection.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="embedded" type="xs:boolean" default="false">
+							<xs:annotation>
+								<xs:documentation>If true, the connection pool will attempt to mange the rserve process.  (Only applies when host is "localhost/127.0.0.1")</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+					</xs:complexType>
+				</xs:element>
+			</xs:sequence>
+			<xs:attribute name="lifo" type="xs:boolean" default="true">
+				<xs:annotation>
+					<xs:documentation>True means that the pool will prefer the recently used ("last in") idle server in the pool (if there are idle instances available).  False means that the pool behaves as a FIFO queue.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>
