@@ -18,15 +18,16 @@
 
 package edu.cornell.med.icb.R;
 
-/**
- * Factory class to ease creation of
- * {@link org.rosuda.REngine.Rserve.RConnection}s.
- */
-public final class RConnectionFactory {
-    /**
-     * Private constructor for factory class.
-     */
-    private RConnectionFactory() {
-        super();
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import org.junit.Test;
+import org.rosuda.REngine.Rserve.RConnection;
+import org.rosuda.REngine.Rserve.RserveException;
+
+public class TestRConnectionPool {
+    @Test
+    public void getConnection() throws RserveException {
+        final RConnectionPool pool = RConnectionPool.getInstance();
+        assertNotNull("Connection pool should never be null", pool);
     }
 }

@@ -30,6 +30,7 @@ import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.ParseException;
 import org.rosuda.REngine.Rserve.RConnection;
 import org.rosuda.REngine.Rserve.RserveException;
+import org.rosuda.REngine.Rserve.RSession;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutorService;
@@ -117,11 +118,20 @@ class RUtils {
         }
 
         final RConnection rConnection = new RConnection(host, port);
+        if (rConnection.needLogin()) {
+            // TODO: send login info
+            rConnection.login("", "");
+        }
         rConnection.shutdown();
 
         if (LOG.isInfoEnabled()) {
             LOG.info("Shutdown message sent");
         }
+    }
+
+    void shutdown(final RSession session) throws RserveException {
+        final RConnection connection = session.attach();
+        connection.shutdown();
     }
 
     /**

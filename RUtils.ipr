@@ -10,7 +10,10 @@
       <properties />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="RUtils" />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="Rserve" />
+      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionFactory.getConnection" />
+      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool" />
+      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="Unnamed" />
     </buildFile>
   </component>
   <component name="BuildJarProjectSettings">
