@@ -22,6 +22,7 @@ import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.SystemConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.rosuda.REngine.Rserve.RConnection;
@@ -32,6 +33,7 @@ import java.util.Deque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.net.URL;
 
 /**
  * Handles pooling of connections to an Rserve process.  Operations are based on
@@ -46,7 +48,7 @@ public final class RConnectionPool {
     /**
      * The singleton instance of the connection pool.
      */
-    private static final RConnectionPool POOL = new RConnectionPool();
+    private static final RConnectionPool INSTANCE = new RConnectionPool();
 
     /**
      * Indicates that that connection pool has been closed and not available for use.
@@ -78,7 +80,7 @@ public final class RConnectionPool {
      * @return The connection pool instance.
      */
     public static RConnectionPool getInstance() {
-        return POOL;
+        return INSTANCE;
     }
 
     /**
@@ -87,11 +89,36 @@ public final class RConnectionPool {
     RConnectionPool() {
         super();
 
+        // if the user defined a configuration, use it
+        final Configuration systemConfiguraion = new SystemConfiguration();
+        final String poolConfig =
+                systemConfiguraion.getString("RConnectionPool.config", "RConnectionPool.xml");
+
+        // get the configuration from the classpath
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Trying to find [" + poolConfig + "] using context class loader " + loader);
+        }
+
+        URL poolConfigURL = loader.getResource(poolConfig);
+        if (poolConfigURL == null) {
+            // We couldn't find resource - now try with the classloader that loaded this class
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Trying to find [" + poolConfig + "] using class loader " + loader);
+            }
+            loader = RConnectionPool.class.getClassLoader();
+            poolConfigURL = loader.getResource(poolConfig);
+        }
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("Configuring pool with: " + poolConfigURL);
+        }
+
         final CompositeConfiguration configuration = new CompositeConfiguration();
         try {
-            configuration.addConfiguration(new XMLConfiguration("RConnectionPool.xml"));
+            configuration.addConfiguration(new XMLConfiguration(poolConfigURL));
         } catch (ConfigurationException e) {
-            LOG.error("Cannot read configuration");
+            LOG.error("Cannot read configuration: " + poolConfigURL);
             // TODO - Do we want to just try and connect to a default Rserve on localhost?
             closed.set(true);
         }
