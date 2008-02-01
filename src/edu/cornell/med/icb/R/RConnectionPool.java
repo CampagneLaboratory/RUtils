@@ -18,7 +18,6 @@
 
 package edu.cornell.med.icb.R;
 
-import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.SystemConfiguration;
@@ -52,7 +51,7 @@ public final class RConnectionPool {
     private static final RConnectionPool INSTANCE = new RConnectionPool();
 
     /**
-     * Name of the system enviornment property that will set a configuration file to use.
+     * Name of the system environment property that will set a configuration file to use.
      * #DEFAULT_CONFIGURATION_FILE will be used if this property is not set.
      */
     private static final String DEFAULT_CONFIGURATION_KEY = "RConnectionPool.configuration";
@@ -61,6 +60,11 @@ public final class RConnectionPool {
      * Name of the default configuration file if one is not specified in the environment.
      */
     private static final String DEFAULT_XML_CONFIGURATION_FILE = "RConnectionPool.xml";
+
+    /**
+     * Default port for Rserve process if one was not specified.
+     */
+    private static final int DEFAULT_RSERVE_PORT = 6311;
 
     /**
      * Indicates that that connection pool has been closed and not available for use.
@@ -75,12 +79,12 @@ public final class RConnectionPool {
     /**
      * The total number of sessions managed by this pool.
      */
-    private final AtomicInteger numberOfSessions = new AtomicInteger();
+    private final AtomicInteger numberOfConnections = new AtomicInteger();
 
     /**
      * The number of sessions that have been borrowed from the pool and not yet returned.
      */
-    private final AtomicInteger numberOfActiveSessions = new AtomicInteger();
+    private final AtomicInteger numberOfActiveConnections = new AtomicInteger();
 
     /**
      * Used to synchronize code blocks.
@@ -121,15 +125,21 @@ public final class RConnectionPool {
             LOG.info("Configuring pool with: " + poolConfigURL);
         }
 
-        final CompositeConfiguration configuration = new CompositeConfiguration();
+        final XMLConfiguration configuration;
         try {
-            configuration.addConfiguration(new XMLConfiguration(poolConfigURL));
+            configuration = new XMLConfiguration(poolConfigURL);
         } catch (ConfigurationException e) {
             LOG.error("Cannot read configuration: " + poolConfigURL, e);
             closed.set(true);
+            return;
         }
 
-        // TODO: set up connections
+        configure(configuration);
+    }
+
+    RConnectionPool(final XMLConfiguration configuration) {
+        super();
+        configure(configuration);
     }
 
     /**
@@ -167,8 +177,24 @@ public final class RConnectionPool {
         return url;
     }
 
-    RConnectionPool(final Configuration configuration) {
-        super();
+    private void configure(final XMLConfiguration configuration) {
+        final int numberOfRServers = configuration.getMaxIndex("RServer") + 1;
+        for (int i = 0; i < numberOfRServers; i++) {
+            final String server = "RServer(" + i + ")";
+            final String host = configuration.getString(server + "[@host]");
+            final int port = configuration.getInt(server + "[@port]", DEFAULT_RSERVE_PORT);
+            final String username = configuration.getString(server + "[@username]");
+            final String password = configuration.getString(server + "[@password]");
+
+            try {
+                addConnection(host, port, username, password);
+            } catch (RserveException e) {
+                LOG.error("Couldn't connect to " + host + ":" + port, e);
+                continue;
+            }
+
+            numberOfConnections.getAndIncrement();
+        }
     }
 
     @Override
@@ -187,11 +213,18 @@ public final class RConnectionPool {
                                   final String password) throws RserveException {
         assertOpen();
 
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Attempting connection with "+ host + ":" + port);
+        }
+
         // create a new connection
         final RConnection connection = new RConnection(host, port);
 
         // authenticate with the server if needed
         if (connection.needLogin()) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Logging in as " + username);
+            }
             connection.login(username, password);
         }
 
@@ -227,7 +260,7 @@ public final class RConnectionPool {
     private void invalidateSession(final RSession session) {
         synchronized (syncObject) {
             if (sessions.remove(session)) {
-                if (numberOfSessions.decrementAndGet() <= 0) {
+                if (numberOfConnections.decrementAndGet() <= 0) {
                     shutdown();
                 }
             }
@@ -248,7 +281,7 @@ public final class RConnectionPool {
      * @return The number of connections that have been borrowed but not returned.
      */
     public int getNumberOfActiveConnections() {
-        return numberOfActiveSessions.get();
+        return numberOfActiveConnections.get();
     }
 
     /**
@@ -258,7 +291,7 @@ public final class RConnectionPool {
     public int getNumberOfIdleConnections()  {
         final int numIdle;
         synchronized (syncObject) {
-            numIdle = numberOfSessions.get() - numberOfActiveSessions.get();
+            numIdle = numberOfConnections.get() - numberOfActiveConnections.get();
         }
         return numIdle;
     }
