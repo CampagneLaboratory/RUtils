@@ -19,21 +19,22 @@
 package edu.cornell.med.icb.R;
 
 import org.apache.commons.configuration.CompositeConfiguration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.SystemConfiguration;
+import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.rosuda.REngine.Rserve.RConnection;
 import org.rosuda.REngine.Rserve.RSession;
 import org.rosuda.REngine.Rserve.RserveException;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Deque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.net.URL;
 
 /**
  * Handles pooling of connections to an Rserve process.  Operations are based on
@@ -49,6 +50,17 @@ public final class RConnectionPool {
      * The singleton instance of the connection pool.
      */
     private static final RConnectionPool INSTANCE = new RConnectionPool();
+
+    /**
+     * Name of the system enviornment property that will set a configuration file to use.
+     * #DEFAULT_CONFIGURATION_FILE will be used if this property is not set.
+     */
+    private static final String DEFAULT_CONFIGURATION_KEY = "RConnectionPool.configuration";
+
+    /**
+     * Name of the default configuration file if one is not specified in the environment.
+     */
+    private static final String DEFAULT_XML_CONFIGURATION_FILE = "RConnectionPool.xml";
 
     /**
      * Indicates that that connection pool has been closed and not available for use.
@@ -89,25 +101,20 @@ public final class RConnectionPool {
     RConnectionPool() {
         super();
 
+        URL poolConfigURL;
+
         // if the user defined a configuration, use it
-        final Configuration systemConfiguraion = new SystemConfiguration();
-        final String poolConfig =
-                systemConfiguraion.getString("RConnectionPool.config", "RConnectionPool.xml");
-
-        // get the configuration from the classpath
-        ClassLoader loader = Thread.currentThread().getContextClassLoader();
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Trying to find [" + poolConfig + "] using context class loader " + loader);
-        }
-
-        URL poolConfigURL = loader.getResource(poolConfig);
-        if (poolConfigURL == null) {
-            // We couldn't find resource - now try with the classloader that loaded this class
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Trying to find [" + poolConfig + "] using class loader " + loader);
+        final Configuration systemConfiguration = new SystemConfiguration();
+        if (systemConfiguration.containsKey(DEFAULT_CONFIGURATION_KEY)) {
+            final String poolConfig = systemConfiguration.getString(DEFAULT_CONFIGURATION_KEY);
+            try {
+                poolConfigURL = new URL(poolConfig);
+            } catch (MalformedURLException e) {
+                // resource is not a URL: attempt to get the resource from the class path
+                poolConfigURL = getResource(poolConfig);
             }
-            loader = RConnectionPool.class.getClassLoader();
-            poolConfigURL = loader.getResource(poolConfig);
+        } else {
+            poolConfigURL = getResource(DEFAULT_XML_CONFIGURATION_FILE);
         }
 
         if (LOG.isInfoEnabled()) {
@@ -118,12 +125,46 @@ public final class RConnectionPool {
         try {
             configuration.addConfiguration(new XMLConfiguration(poolConfigURL));
         } catch (ConfigurationException e) {
-            LOG.error("Cannot read configuration: " + poolConfigURL);
-            // TODO - Do we want to just try and connect to a default Rserve on localhost?
+            LOG.error("Cannot read configuration: " + poolConfigURL, e);
             closed.set(true);
         }
 
         // TODO: set up connections
+    }
+
+    /**
+     * Search for a resource using the thread context class loader. If that fails, search
+     * using the class loader that loaded this class.  If that still fails, try one last
+     * time with {@link ClassLoader#getSystemResource(String)}.
+     * @param resource The resource to search for
+     * @return A url representing the resource or <code>null</code> if the resource was not found
+     */
+    private URL getResource(final String resource) {
+        URL url;   // get the configuration from the classpath
+        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Trying to find [" + resource + "] using context class loader " + loader);
+        }
+
+        url = loader.getResource(resource);
+        if (url == null) {
+            // We couldn't find resource - now try with the class loader that loaded this class
+            loader = RConnectionPool.class.getClassLoader();
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Trying to find [" + resource + "] using class loader " + loader);
+            }
+            url = loader.getResource(resource);
+        }
+
+        if (url == null) {
+            // make a last attempt to get the resource from the class path
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Trying to find [" + resource + "] using system class loader");
+            }
+            url = ClassLoader.getSystemResource(resource);
+        }
+
+        return url;
     }
 
     RConnectionPool(final Configuration configuration) {
