@@ -30,14 +30,27 @@ import org.rosuda.REngine.Rserve.RserveException;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Deque;
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Handles pooling of connections to an Rserve process.  Operations are based on
- * the ObjectPool from commons-pool.
+ * Handles pooling of connections to <a href="http://www.rforge.net/Rserve/">Rserve</a> instances.
+ * Operations are based on the ObjectPool interface as defined in the
+ * <a href="http://commons.apache.org/pool/">commons pool</a> package however, this class does
+ * not implement the interface because the commons pool package does not support JDK 1.5+
+ * features at the time this class was written.
+ *
+ * Rserve processes available to the pool are configured using a fairly simply xml file.
+ * TODO: Describe file an example of how to configure
+ *
+ * The preferred way to specify the configuration file is through the use of a
+ * system property called "RConnectionPool.configuration". The property should be a valid url or
+ * the name of a resource file that exists on the classpath.  In case the system property
+ * RConnectionPool.configuration is not defined, then the resource will be set to its
+ * default value of "RConnectionPool.xml".
  */
 public final class RConnectionPool {
     /**
@@ -72,9 +85,16 @@ public final class RConnectionPool {
     private final AtomicBoolean closed = new AtomicBoolean();
 
     /**
-     * The list of sessions that can be used in the pool.
+     * The list of sessions that can be used in the pool.  Note that
+     * {@link org.rosuda.REngine.Rserve.RConnection} objects are not stored directly.
+     * Rather {@link org.rosuda.REngine.Rserve.RSession} objects are stored.  This means that
+     * the pool has actually established the connections to the servers at least once as
+     * this is the only way to get session objects.  The session objects are intentionally
+     * "hidden" from clients of the pool.  For this reason, public pool methods refer to
+     * "connections" and not sessions.  In reality, they can be veiwed as different
+     * representations of the same concept.
      */
-    private final Deque<RSession> sessions = new LinkedBlockingDeque<RSession>();
+    private final BlockingDeque<RSession> sessions = new LinkedBlockingDeque<RSession>();
 
     /**
      * The total number of sessions managed by this pool.
@@ -100,7 +120,8 @@ public final class RConnectionPool {
     }
 
     /**
-     * Private constructor for factory class.
+     * Create a new pool to manage {@link org.rosuda.REngine.Rserve.RConnection} objects
+     * using the default configuration method.
      */
     RConnectionPool() {
         super();
@@ -137,6 +158,11 @@ public final class RConnectionPool {
         configure(configuration);
     }
 
+    /**
+     * Create a new pool to manage {@link org.rosuda.REngine.Rserve.RConnection} objects
+     * using the specified configuration.
+     * @param configuration The configuration object that defines the servers available to the pool
+     */
     RConnectionPool(final XMLConfiguration configuration) {
         super();
         configure(configuration);
@@ -147,10 +173,10 @@ public final class RConnectionPool {
      * using the class loader that loaded this class.  If that still fails, try one last
      * time with {@link ClassLoader#getSystemResource(String)}.
      * @param resource The resource to search for
-     * @return A url representing the resource or <code>null</code> if the resource was not found
+     * @return A url representing the resource or {@code null} if the resource was not found
      */
     private URL getResource(final String resource) {
-        URL url;   // get the configuration from the classpath
+        URL url;   // get the configuration from the classpath of the current thread
         ClassLoader loader = Thread.currentThread().getContextClassLoader();
         if (LOG.isDebugEnabled()) {
             LOG.debug("Trying to find [" + resource + "] using context class loader " + loader);
@@ -159,7 +185,7 @@ public final class RConnectionPool {
         url = loader.getResource(resource);
         if (url == null) {
             // We couldn't find resource - now try with the class loader that loaded this class
-            loader = RConnectionPool.class.getClassLoader();
+            loader = RConnectionPool.class.getClassLoader();     // NOPMD
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Trying to find [" + resource + "] using class loader " + loader);
             }
@@ -177,7 +203,13 @@ public final class RConnectionPool {
         return url;
     }
 
+    /**
+     * Configure the rserve instances available to this pool using an xml based
+     * configuration.
+     * @param configuration The configration to use
+     */
     private void configure(final XMLConfiguration configuration) {
+        configuration.setValidating(true);
         final int numberOfRServers = configuration.getMaxIndex("RServer") + 1;
         for (int i = 0; i < numberOfRServers; i++) {
             final String server = "RServer(" + i + ")";
@@ -197,15 +229,24 @@ public final class RConnectionPool {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * @throws Throwable
+     */
     @Override
     protected void finalize() throws Throwable {
-        super.finalize();
         shutdown();
+        super.finalize();
     }
 
     /**
+     * Adds a connection to the pool opf available conections.
      * @param host Host where the command should be sent
      * @param port Port number where the command should be sent
+     * @param username Username to send to the server if authentication is required
+     * @param password Password to send to the server if authentication is required
+     * @return true if the connection was added successfully, false otherwise
+     * @throws RserveException if there is a problem connectting to the server
      */
     private boolean addConnection(final String host,
                                   final int port,
@@ -246,7 +287,7 @@ public final class RConnectionPool {
 
     /**
      * Has this pool instance been closed.
-     * @return <code>true</code> when this pool has been closed.
+     * @return true< when this pool has been closed.
      */
     public boolean isClosed() {
         return closed.get();
@@ -296,25 +337,79 @@ public final class RConnectionPool {
         return numIdle;
     }
 
+    /**
+     * Obtains an available {@link org.rosuda.REngine.Rserve.RConnection} from this pool.
+     * If all the connections managed by this pool are in use, this method will block until
+     * a connection becomes available.
+     * @return A valid connection object
+     */
     public RConnection borrowConnection() {
-        assertOpen();
-
         RConnection connection = null;
         boolean gotConnection = false;
-        while (!gotConnection && !isClosed()) {
-            final RSession session = sessions.removeFirst();
+        while (!gotConnection) {
+            assertOpen();
+            RSession session = null;
             try {
+                session = sessions.takeFirst();
                 connection = session.attach();
                 gotConnection = true;
             } catch (RserveException e) {
+                // perhaps the server went down, remove it from the available list
                 LOG.error("Error with connection", e);
                 invalidateSession(session);
+            } catch (InterruptedException e) {
+                LOG.warn("Interrupted", e);
+                Thread.currentThread().interrupt();
             }
         }
 
         return connection;
     }
 
+    /**
+     * Obtains an available {@link org.rosuda.REngine.Rserve.RConnection} from this pool.
+     * If all the connections managed by this pool are in use, this method will wait up to the
+     * specified wait time for a connection to become available.
+     *
+     * @param timeout how long to wait before giving up, in units of <tt>unit</tt>
+     * @param unit a <tt>TimeUnit</tt> determining how to interpret the <tt>timeout</tt> parameter
+     * @return A valid connection object or null if no connection was available withing the timeout
+     * period
+     */
+    public RConnection borrowConnection(final long timeout, final TimeUnit unit) {
+        RConnection connection = null;
+        boolean gotConnection = false;
+        boolean timedOut = false;
+        while (!gotConnection && !timedOut) {
+            assertOpen();
+            RSession session = null;
+            try {
+                session = sessions.pollFirst(timeout, unit);
+                if (session == null) {
+                    LOG.debug("Timeout trying to get a connection");
+                    timedOut = true;
+                    continue;
+                }
+                connection = session.attach();
+                gotConnection = true;
+            } catch (RserveException e) {
+                // perhaps the server went down, remove it from the available list
+                LOG.error("Error with connection", e);
+                invalidateSession(session);
+            } catch (InterruptedException e) {
+                LOG.warn("Interrupted", e);
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        return connection;
+    }
+
+    /**
+     * Return a connection to the pool. The connection <strong>must</strong> have been obtained
+     * using {@link #borrowConnection()}.
+     * @param connection The connection to return
+     */
     public void returnConnection(final RConnection connection) throws RserveException {
         assertOpen();
 
