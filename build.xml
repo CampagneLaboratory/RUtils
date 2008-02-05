@@ -84,6 +84,7 @@
             <link href="http://commons.apache.org/lang/api-release/"/>
             <link href="http://commons.apache.org/logging/commons-logging-1.1/apidocs/"/>
             <link href="http://commons.apache.org/pool/apidocs/"/>
+            <link href="http://icbtools.med.cornell.edu/javadocs/Rserve/"/>
             <classpath>
                 <path refid="compile.classpath"/>
                 <pathelement location="${classes}"/>

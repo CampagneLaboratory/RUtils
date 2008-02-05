@@ -343,11 +343,11 @@ public final class RConnectionPool {
      * @return The number of connections that are available right now.
      */
     public int getNumberOfIdleConnections()  {
-        final int numIdle;
+        final int numberOfIdleConnections;
         synchronized (syncObject) {
-            numIdle = numberOfConnections.get() - numberOfActiveConnections.get();
+            numberOfIdleConnections = numberOfConnections.get() - numberOfActiveConnections.get();
         }
-        return numIdle;
+        return numberOfIdleConnections;
     }
 
     /**
@@ -422,6 +422,7 @@ public final class RConnectionPool {
      * Return a connection to the pool. The connection <strong>must</strong> have been obtained
      * using {@link #borrowConnection()}.
      * @param connection The connection to return
+     * @throws RserveException if there is a problem with the connection
      */
     public void returnConnection(final RConnection connection) throws RserveException {
         assertOpen();
