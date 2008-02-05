@@ -91,7 +91,7 @@ public final class RConnectionPool {
      * the pool has actually established the connections to the servers at least once as
      * this is the only way to get session objects.  The session objects are intentionally
      * "hidden" from clients of the pool.  For this reason, public pool methods refer to
-     * "connections" and not sessions.  In reality, they can be veiwed as different
+     * "connections" and not sessions.  In reality, they can be viewed as different
      * representations of the same concept.
      */
     private final BlockingDeque<RSession> sessions = new LinkedBlockingDeque<RSession>();
@@ -123,7 +123,7 @@ public final class RConnectionPool {
      * Create a new pool to manage {@link org.rosuda.REngine.Rserve.RConnection} objects
      * using the default configuration method.
      */
-    RConnectionPool() {
+    private RConnectionPool() {
         super();
 
         URL poolConfigURL;
@@ -218,14 +218,19 @@ public final class RConnectionPool {
             final String username = configuration.getString(server + "[@username]");
             final String password = configuration.getString(server + "[@password]");
 
+            final boolean added;
             try {
-                addConnection(host, port, username, password);
+                added = addConnection(host, port, username, password);
             } catch (RserveException e) {
                 LOG.error("Couldn't connect to " + host + ":" + port, e);
                 continue;
             }
 
-            numberOfConnections.getAndIncrement();
+            if (added) {
+                numberOfConnections.getAndIncrement();
+            } else {
+                LOG.error("Unable to add connection to " + host + ":" + port);
+            }
         }
 
         if (numberOfConnections.get() == 0) {
