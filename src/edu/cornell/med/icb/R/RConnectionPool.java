@@ -59,11 +59,6 @@ public final class RConnectionPool {
     private static final Log LOG = LogFactory.getLog(RConnectionPool.class);
 
     /**
-     * The singleton instance of the connection pool.
-     */
-    private static final RConnectionPool INSTANCE = new RConnectionPool();
-
-    /**
      * Name of the system environment property that will set a configuration file to use.
      * #DEFAULT_CONFIGURATION_FILE will be used if this property is not set.
      */
@@ -116,7 +111,7 @@ public final class RConnectionPool {
      * @return The connection pool instance.
      */
     public static RConnectionPool getInstance() {
-        return INSTANCE;
+        return SingletonHolder.INSTANCE;
     }
 
     /**
@@ -155,28 +150,6 @@ public final class RConnectionPool {
     }
 
     /**
-     * Create a new pool to manage {@link org.rosuda.REngine.Rserve.RConnection} objects
-     * using the specified configuration.
-     * @param configuration The configuration object that defines the servers available to the pool
-     */
-    RConnectionPool(final XMLConfiguration configuration) {
-        super();
-        configure(configuration);
-    }
-
-    /**
-     * Create a new pool to manage {@link org.rosuda.REngine.Rserve.RConnection} objects
-     * using the specified configuration.
-     * @param configurationURL A url for an xml configuration file that defines the servers
-     * available to the pool
-     * @throws ConfigurationException if the configuration cannot be built from the url
-     */
-    RConnectionPool(final URL configurationURL) throws ConfigurationException {
-        super();
-        configure(configurationURL);
-    }
-
-    /**
      * Search for a resource using the thread context class loader. If that fails, search
      * using the class loader that loaded this class.  If that still fails, try one last
      * time with {@link ClassLoader#getSystemResource(String)}.
@@ -211,7 +184,6 @@ public final class RConnectionPool {
         return url;
     }
 
-
     /**
      * Configure the rserve instances available to this pool using an xml based
      * configuration at the specified URL.
@@ -219,18 +191,17 @@ public final class RConnectionPool {
      * @throws ConfigurationException if the configuration cannot be built from the url
      */
     private void configure(final URL configurationURL) throws ConfigurationException {
-/*
-        final XMLConfiguration configuration;
-        try {
-            configuration = new XMLConfiguration(configurationURL);
-        } catch (ConfigurationException e) {
-            LOG.error("Cannot read configuration: " + configurationURL, e);
-            closed.set(true);
-            return;
-        }
-*/
-
         configure(new XMLConfiguration(configurationURL));
+    }
+
+    /**
+     * Create a new pool to manage {@link org.rosuda.REngine.Rserve.RConnection} objects
+     * using the specified configuration.
+     * @param configuration The configuration object that defines the servers available to the pool
+     */
+    RConnectionPool(final XMLConfiguration configuration) {
+        super();
+        configure(configuration);
     }
 
     /**
@@ -270,16 +241,6 @@ public final class RConnectionPool {
         }
 
         return !closed.get();
-    }
-
-    /**
-     * Shuts down the any connections left open from the pool.
-     * {@inheritDoc}
-     */
-    @Override
-    protected void finalize() throws Throwable {
-        shutdown();
-        super.finalize();
     }
 
     /**
@@ -337,43 +298,15 @@ public final class RConnectionPool {
     }
 
     /**
-     * Removes a session from the pool (presumably because there was an issue with the connection.
-     * The pool will be closed if this action leaves no valid sessions.
-     * @param session The session to remove.
+     * Create a new pool to manage {@link org.rosuda.REngine.Rserve.RConnection} objects
+     * using the specified configuration.
+     * @param configurationURL A url for an xml configuration file that defines the servers
+     * available to the pool
+     * @throws ConfigurationException if the configuration cannot be built from the url
      */
-    private void invalidateSession(final RSession session) {
-        synchronized (syncObject) {
-            if (sessions.remove(session)) {
-                if (numberOfConnections.decrementAndGet() <= 0) {
-                    shutdown();
-                }
-            }
-        }
-    }
-
-    /**
-     * Shutdown this pool.
-     */
-    public void shutdown() {
-        closed.set(true);
-
-        // TODO: terminate embedded servers
-    }
-
-    /**
-     * Get the number of potential connections managed by the pool.
-     * @return the number of connections managed by the pool
-     */
-    public int getNumberOfConnections() {
-        return numberOfConnections.get();
-    }
-
-    /**
-     * Get the number of connections that are currently in use.
-     * @return The number of connections that have been borrowed but not returned.
-     */
-    public int getNumberOfActiveConnections() {
-        return numberOfActiveConnections.get();
+    RConnectionPool(final URL configurationURL) throws ConfigurationException {
+        super();
+        configure(configurationURL);
     }
 
     /**
@@ -386,6 +319,24 @@ public final class RConnectionPool {
             numberOfIdleConnections = numberOfConnections.get() - numberOfActiveConnections.get();
         }
         return numberOfIdleConnections;
+    }
+
+    /**
+     * Shuts down the any connections left open from the pool.
+     * {@inheritDoc}
+     */
+    @Override
+    protected void finalize() throws Throwable {
+        shutdown();
+        super.finalize();
+    }
+
+    /**
+     * Shutdown this pool.
+     */
+    public void shutdown() {
+        closed.set(true);
+        // TODO: terminate embedded servers
     }
 
     /**
@@ -402,7 +353,7 @@ public final class RConnectionPool {
             RSession session = null;
             try {
                 session = sessions.takeFirst();
-                connection = session.attach();
+                connection = borrow(session);
                 gotConnection = true;
             } catch (RserveException e) {
                 // perhaps the server went down, remove it from the available list
@@ -415,6 +366,21 @@ public final class RConnectionPool {
         }
 
         return connection;
+    }
+
+    /**
+     * Removes a session from the pool (presumably because there was an issue with the connection.
+     * The pool will be closed if this action leaves no valid sessions.
+     * @param session The session to remove.
+     */
+    private void invalidateSession(final RSession session) {
+        synchronized (syncObject) {
+            if (sessions.remove(session)) {
+                if (numberOfConnections.decrementAndGet() <= 0) {
+                    shutdown();
+                }
+            }
+        }
     }
 
     /**
@@ -441,7 +407,7 @@ public final class RConnectionPool {
                     timedOut = true;
                     continue;
                 }
-                connection = session.attach();
+                connection = borrow(session);
                 gotConnection = true;
             } catch (RserveException e) {
                 // perhaps the server went down, remove it from the available list
@@ -457,6 +423,34 @@ public final class RConnectionPool {
     }
 
     /**
+     * Get a connection from an existing session.
+     * @param session The session that holds the connection
+     * @return A valid connection
+     * @throws RserveException if there was a problem getting the connection
+     */
+    private RConnection borrow(final RSession session) throws RserveException {
+        final RConnection connection = session.attach();
+        numberOfActiveConnections.incrementAndGet();
+        return connection;
+    }
+
+    /**
+     * Get the number of connections that are currently in use.
+     * @return The number of connections that have been borrowed but not returned.
+     */
+    public int getNumberOfActiveConnections() {
+        return numberOfActiveConnections.get();
+    }
+
+    /**
+     * Get the number of potential connections managed by the pool.
+     * @return the number of connections managed by the pool
+     */
+    public int getNumberOfConnections() {
+        return numberOfConnections.get();
+    }
+
+    /**
      * Return a connection to the pool. The connection <strong>must</strong> have been obtained
      * using {@link #borrowConnection()}.
      * @param connection The connection to return
@@ -467,5 +461,24 @@ public final class RConnectionPool {
 
         final RSession session = connection.detach();
         sessions.addFirst(session);
+        numberOfActiveConnections.decrementAndGet();
+    }
+
+    /**
+     * SingletonHolder is loaded on the first execution of RConnectionPool.getInstance()
+     * or the first access to SingletonHolder.INSTANCE, not before.
+     */
+    private static final class SingletonHolder {
+        /**
+         * Used to construct a singleton.
+         */
+        private SingletonHolder() {
+            super();
+        }
+
+        /**
+         * The singleton instance of the connection pool.
+         */
+        private static final RConnectionPool INSTANCE = new RConnectionPool();
     }
 }
