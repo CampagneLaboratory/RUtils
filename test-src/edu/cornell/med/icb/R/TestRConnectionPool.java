@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Institute for Computational Biomedicine,
+ * Copyright (C) 2008 Institute for Computational Biomedicine,
  *                    Weill Medical College of Cornell University
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -18,10 +18,11 @@
 
 package edu.cornell.med.icb.R;
 
+import org.apache.commons.configuration.XMLConfiguration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import org.junit.Test;
-import org.rosuda.REngine.Rserve.RConnection;
 import org.rosuda.REngine.Rserve.RserveException;
 
 public class TestRConnectionPool {
@@ -29,5 +30,28 @@ public class TestRConnectionPool {
     public void getConnection() throws RserveException {
         final RConnectionPool pool = RConnectionPool.getInstance();
         assertNotNull("Connection pool should never be null", pool);
+/*
+        final RConnection connection = pool.borrowConnection();
+        assertNotNull("Connection should not be null", connection);
+        assertTrue(connection.isConnected());
+*/
+    }
+
+    /**
+     * Validates that the connection pool will not allow connections to be handed out
+     * when no valid servers were set.
+     */
+    @Test(expected=IllegalStateException.class)
+    public void noValidServers() {
+        // set up a pool with an empty configuration
+        final RConnectionPool pool = new RConnectionPool(new XMLConfiguration());
+        assertNotNull("Connection pool should never be null", pool);
+        assertTrue("The pool should be not be open", pool.isClosed());
+        assertEquals("There should be no connections", 0, pool.getNumberOfConnections());
+        assertEquals("There should be no connections", 0, pool.getNumberOfActiveConnections());
+        assertEquals("There should be no connections", 0, pool.getNumberOfIdleConnections());
+
+        // if we try to get a connection, we can't - thre are none configured
+        pool.borrowConnection();
     }
 }
