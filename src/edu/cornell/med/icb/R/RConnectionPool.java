@@ -264,7 +264,7 @@ public final class RConnectionPool {
         assertOpen();
 
         if (LOG.isDebugEnabled()) {
-            LOG.debug("Attempting connection with "+ host + ":" + port);
+            LOG.debug("Attempting connection with " + host + ":" + port);
         }
 
         // create a new connection
@@ -361,7 +361,7 @@ public final class RConnectionPool {
                     // silently ignore
                 }
                 sessionIterator.remove();
-                numberOfConnections.decrementAndGet();                
+                numberOfConnections.decrementAndGet();
             }
         }
         closed.set(true);
