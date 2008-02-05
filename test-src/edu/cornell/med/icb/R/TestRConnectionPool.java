@@ -25,6 +25,9 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 import org.rosuda.REngine.Rserve.RserveException;
 
+/**
+ * Validates basic functionality of the {@link edu.cornell.med.icb.R.RConnectionPool}.
+ */
 public class TestRConnectionPool {
     @Test
     public void getConnection() throws RserveException {
@@ -51,7 +54,7 @@ public class TestRConnectionPool {
         assertEquals("There should be no connections", 0, pool.getNumberOfActiveConnections());
         assertEquals("There should be no connections", 0, pool.getNumberOfIdleConnections());
 
-        // if we try to get a connection, we can't - thre are none configured
+        // if we try to get a connection, we shouldn't be able to - there are none configured
         pool.borrowConnection();
     }
 }

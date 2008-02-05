@@ -245,13 +245,13 @@ public final class RConnectionPool {
     }
 
     /**
-     * Adds a connection to the pool opf available conections.
+     * Adds a connection to the pool opf available connections.
      * @param host Host where the command should be sent
      * @param port Port number where the command should be sent
      * @param username Username to send to the server if authentication is required
      * @param password Password to send to the server if authentication is required
      * @return true if the connection was added successfully, false otherwise
-     * @throws RserveException if there is a problem connectting to the server
+     * @throws RserveException if there is a problem connecting to the server
      */
     private boolean addConnection(final String host,
                                   final int port,
@@ -292,7 +292,7 @@ public final class RConnectionPool {
 
     /**
      * Has this pool instance been closed.
-     * @return true< when this pool has been closed.
+     * @return true when this pool has been closed.
      */
     public boolean isClosed() {
         return closed.get();

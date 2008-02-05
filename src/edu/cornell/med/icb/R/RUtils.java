@@ -18,25 +18,25 @@
 
 package edu.cornell.med.icb.R;
 
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.Parser;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Parser;
-import org.apache.commons.cli.BasicParser;
-import org.apache.commons.cli.ParseException;
 import org.rosuda.REngine.Rserve.RConnection;
-import org.rosuda.REngine.Rserve.RserveException;
 import org.rosuda.REngine.Rserve.RSession;
+import org.rosuda.REngine.Rserve.RserveException;
 
 import java.io.IOException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.Callable;
 
 /**
  * Class used to start instances of the R server from within the JVM.
@@ -110,17 +110,19 @@ class RUtils {
      * Can be used to shut down a running rserve instance.
      * @param host Host where the command should be sent
      * @param port Port number where the command should be sent
+     * @param username Username to send to the server if authentication is required
+     * @param password Password to send to the server if authentication is required
      * @throws RserveException if the process cannot be shutdown properly
      */
-    void shutdown(final String host, final int port) throws RserveException {
+    void shutdown(final String host, final int port,
+                  final String username, final String password) throws RserveException {
         if (LOG.isInfoEnabled()) {
             LOG.info("Attempting to shutdown Rserve on " + host + ":" + port);
         }
 
         final RConnection rConnection = new RConnection(host, port);
         if (rConnection.needLogin()) {
-            // TODO: send login info
-            rConnection.login("", "");
+            rConnection.login(username, password);
         }
         rConnection.shutdown();
 
@@ -129,6 +131,11 @@ class RUtils {
         }
     }
 
+    /**
+     * Can be used to shut down a running rserve instance.
+     * @param session the session associated with to the rserve process to shutdown
+     * @throws RserveException if the process cannot be shutdown properly
+     */
     void shutdown(final RSession session) throws RserveException {
         final RConnection connection = session.attach();
         connection.shutdown();
@@ -166,17 +173,31 @@ class RUtils {
         hostOption.setType(String.class);
         options.addOption(hostOption);
 
+        final Option userOption =
+                new Option("u", "username", true, "Username to send to the Rserve process");
+        userOption.setArgName("username");
+        userOption.setType(String.class);
+        options.addOption(userOption);
+
+        final Option passwordOption =
+                new Option("p", "password", true, "Password to send to the Rserve process");
+        passwordOption.setArgName("password");
+        passwordOption.setType(String.class);
+        options.addOption(passwordOption);
+
         final Parser parser = new BasicParser();
         final CommandLine commandLine = parser.parse(options, args);
 
-        final int port = Integer.valueOf(commandLine.getOptionValue("port", "6311"));
         final String host = commandLine.getOptionValue("host", "localhost");
+        final int port = Integer.valueOf(commandLine.getOptionValue("port", "6311"));
+        final String username = commandLine.getOptionValue("username");
+        final String password = commandLine.getOptionValue("password");
 
         if (commandLine.hasOption("h")) {
             usage(options);
         } else if (commandLine.hasOption("shutdown")) {
             final RUtils rUtils = new RUtils();
-            rUtils.shutdown(host, port);
+            rUtils.shutdown(host, port, username, password);
         } else {
             usage(options);
         }
