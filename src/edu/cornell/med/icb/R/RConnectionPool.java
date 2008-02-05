@@ -206,7 +206,7 @@ public final class RConnectionPool {
     /**
      * Configure the rserve instances available to this pool using an xml based
      * configuration.
-     * @param configuration The configration to use
+     * @param configuration The configuration to use
      */
     private void configure(final XMLConfiguration configuration) {
         configuration.setValidating(true);
@@ -227,11 +227,16 @@ public final class RConnectionPool {
 
             numberOfConnections.getAndIncrement();
         }
+
+        if (numberOfConnections.get() == 0) {
+            LOG.error("No valid servers found!  Closing pool");
+            closed.set(true);
+        }
     }
 
     /**
+     * Shuts down the any connections left open from the pool.
      * {@inheritDoc}
-     * @throws Throwable
      */
     @Override
     protected void finalize() throws Throwable {
@@ -315,6 +320,14 @@ public final class RConnectionPool {
         closed.set(true);
 
         // TODO: terminate embedded servers
+    }
+
+    /**
+     * Get the number of potential connections managed by the pool.
+     * @return the number of connections managed by the pool
+     */
+    public int getNumberOfConnections() {
+        return numberOfConnections.get();
     }
 
     /**
