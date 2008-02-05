@@ -42,7 +42,7 @@ import java.util.concurrent.Future;
  * Class used to start instances of the R server from within the JVM.
  * @see <a href="http://www.rforge.net/Rserve/">Rserve - Binary R server</a>
  */
-class RUtils {
+public class RUtils {
     /**
      * Used to log debug and informational messages.
      */
@@ -68,15 +68,21 @@ class RUtils {
      * on the path.
      */
     private static final String DEFAULT_RSERVE_COMMAND =
-            System.getProperty("RSERVE_COMMAND",
-                    SystemUtils.IS_OS_WINDOWS ? DEFAULT_RSERVE_EXECUTABLE_WINDOWS : DEFAULT_RSERVE_EXECUTABLE);
+            System.getProperty("RSERVE_COMMAND", SystemUtils.IS_OS_WINDOWS
+                    ? DEFAULT_RSERVE_EXECUTABLE_WINDOWS : DEFAULT_RSERVE_EXECUTABLE);
 
     /**
      * Name of Rserve executable.  This should be a fully qualified path unless it
      * is located on the execution path.
      */
-    private String rServeCommand = "C:\\Program Files\\R\\R-2.6.0\\library\\Rserve\\" + DEFAULT_RSERVE_COMMAND;
+    private String rServeCommand =
+            "C:\\Program Files\\R\\R-2.6.0\\library\\Rserve\\" + DEFAULT_RSERVE_COMMAND;
 
+    /**
+     * This class is for internal use by the {@link edu.cornell.med.icb.R.RConnectionPool}
+     * and also from the command line via the {@link #main(String[])} method.  Normally,
+     * other classes should not be using this directly.
+     */
     RUtils() {
         super();
     }
@@ -161,14 +167,14 @@ class RUtils {
                 new Option("s", "shutdown", false, "Shutdown a running Rserve process");
         options.addOption(shutdownOption);
 
-        final Option portOption =
-                new Option("port", "port", true, "Use specified port to communicate with the Rserve process");
+        final Option portOption = new Option("port", "port", true,
+                        "Use specified port to communicate with the Rserve process");
         portOption.setArgName("port");
         portOption.setType(int.class);
         options.addOption(portOption);
 
-        final Option hostOption =
-                new Option("host", "host", true, "communicate with the Rserve process on the given host");
+        final Option hostOption = new Option("host", "host", true,
+                "Communicate with the Rserve process on the given host");
         hostOption.setArgName("hostname");
         hostOption.setType(String.class);
         options.addOption(hostOption);

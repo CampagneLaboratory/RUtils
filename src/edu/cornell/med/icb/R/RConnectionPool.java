@@ -146,16 +146,12 @@ public final class RConnectionPool {
             LOG.info("Configuring pool with: " + poolConfigURL);
         }
 
-        final XMLConfiguration configuration;
         try {
-            configuration = new XMLConfiguration(poolConfigURL);
+            configure(poolConfigURL);
         } catch (ConfigurationException e) {
             LOG.error("Cannot read configuration: " + poolConfigURL, e);
             closed.set(true);
-            return;
         }
-
-        configure(configuration);
     }
 
     /**
@@ -166,6 +162,18 @@ public final class RConnectionPool {
     RConnectionPool(final XMLConfiguration configuration) {
         super();
         configure(configuration);
+    }
+
+    /**
+     * Create a new pool to manage {@link org.rosuda.REngine.Rserve.RConnection} objects
+     * using the specified configuration.
+     * @param configurationURL A url for an xml configuration file that defines the servers
+     * available to the pool
+     * @throws ConfigurationException if the configuration cannot be built from the url
+     */
+    RConnectionPool(final URL configurationURL) throws ConfigurationException {
+        super();
+        configure(configurationURL);
     }
 
     /**
@@ -203,12 +211,35 @@ public final class RConnectionPool {
         return url;
     }
 
+
+    /**
+     * Configure the rserve instances available to this pool using an xml based
+     * configuration at the specified URL.
+     * @param configurationURL The URL of the configuration to use
+     * @throws ConfigurationException if the configuration cannot be built from the url
+     */
+    private void configure(final URL configurationURL) throws ConfigurationException {
+/*
+        final XMLConfiguration configuration;
+        try {
+            configuration = new XMLConfiguration(configurationURL);
+        } catch (ConfigurationException e) {
+            LOG.error("Cannot read configuration: " + configurationURL, e);
+            closed.set(true);
+            return;
+        }
+*/
+
+        configure(new XMLConfiguration(configurationURL));
+    }
+
     /**
      * Configure the rserve instances available to this pool using an xml based
      * configuration.
      * @param configuration The configuration to use
+     * @return true if the configuration has at least one valid server, false otherwise
      */
-    private void configure(final XMLConfiguration configuration) {
+    private boolean configure(final XMLConfiguration configuration) {
         configuration.setValidating(true);
         final int numberOfRServers = configuration.getMaxIndex("RServer") + 1;
         for (int i = 0; i < numberOfRServers; i++) {
@@ -237,6 +268,8 @@ public final class RConnectionPool {
             LOG.error("No valid servers found!  Closing pool");
             closed.set(true);
         }
+
+        return !closed.get();
     }
 
     /**
