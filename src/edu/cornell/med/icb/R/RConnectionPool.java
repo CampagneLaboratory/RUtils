@@ -30,6 +30,10 @@ import org.rosuda.REngine.Rserve.RserveException;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
@@ -92,14 +96,15 @@ public final class RConnectionPool {
     private final BlockingDeque<RSession> sessions = new LinkedBlockingDeque<RSession>();
 
     /**
+     * A list of connections that have been borrowed from the pool but not yet returned.
+     */
+    private final Collection<RConnection> activeConnections =
+            Collections.synchronizedList(new LinkedList<RConnection>());
+
+    /**
      * The total number of sessions managed by this pool.
      */
     private final AtomicInteger numberOfConnections = new AtomicInteger();
-
-    /**
-     * The number of sessions that have been borrowed from the pool and not yet returned.
-     */
-    private final AtomicInteger numberOfActiveConnections = new AtomicInteger();
 
     /**
      * Used to synchronize code blocks.
@@ -316,7 +321,7 @@ public final class RConnectionPool {
     public int getNumberOfIdleConnections()  {
         final int numberOfIdleConnections;
         synchronized (syncObject) {
-            numberOfIdleConnections = numberOfConnections.get() - numberOfActiveConnections.get();
+            numberOfIdleConnections = numberOfConnections.get() - activeConnections.size();
         }
         return numberOfIdleConnections;
     }
@@ -327,7 +332,9 @@ public final class RConnectionPool {
      */
     @Override
     protected void finalize() throws Throwable {
-        shutdown();
+        if (!closed.get()) {
+            shutdown();
+        }
         super.finalize();
     }
 
@@ -335,6 +342,28 @@ public final class RConnectionPool {
      * Shutdown this pool.
      */
     public void shutdown() {
+        synchronized (syncObject) {
+            final Iterator<RConnection> connectionIterator = activeConnections.iterator();
+            while (connectionIterator.hasNext()) {
+                final RConnection connection = connectionIterator.next();
+                connection.close();
+                connectionIterator.remove();
+                numberOfConnections.decrementAndGet();
+            }
+
+            final Iterator<RSession> sessionIterator = sessions.iterator();
+            while (sessionIterator.hasNext()) {
+                final RSession session = sessionIterator.next();
+                try {
+                    final RConnection connection = session.attach();
+                    connection.close();
+                } catch (RserveException e) {
+                    // silently ignore
+                }
+                sessionIterator.remove();
+                numberOfConnections.decrementAndGet();                
+            }
+        }
         closed.set(true);
         // TODO: terminate embedded servers
     }
@@ -430,7 +459,9 @@ public final class RConnectionPool {
      */
     private RConnection borrow(final RSession session) throws RserveException {
         final RConnection connection = session.attach();
-        numberOfActiveConnections.incrementAndGet();
+        synchronized (syncObject) {
+            activeConnections.add(connection);
+        }
         return connection;
     }
 
@@ -439,7 +470,7 @@ public final class RConnectionPool {
      * @return The number of connections that have been borrowed but not returned.
      */
     public int getNumberOfActiveConnections() {
-        return numberOfActiveConnections.get();
+        return activeConnections.size();
     }
 
     /**
@@ -459,9 +490,26 @@ public final class RConnectionPool {
     public void returnConnection(final RConnection connection) throws RserveException {
         assertOpen();
 
-        final RSession session = connection.detach();
-        sessions.addFirst(session);
-        numberOfActiveConnections.decrementAndGet();
+        if (!activeConnections.contains(connection)) {
+            throw new IllegalArgumentException("Connection is not managed by this pool");
+        }
+
+        final RSession session;
+        try {
+            session = connection.detach();
+        } catch (RserveException e) {
+            // the connection is not in a good state, remove it from the pool
+            activeConnections.remove(connection);
+            if (numberOfConnections.decrementAndGet() <= 0) {
+                shutdown();
+            }
+            throw e;
+        }
+
+        synchronized (syncObject) {
+            activeConnections.remove(connection);
+            sessions.addFirst(session);
+        }
     }
 
     /**

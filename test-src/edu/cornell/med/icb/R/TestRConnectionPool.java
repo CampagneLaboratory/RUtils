@@ -20,11 +20,13 @@ package edu.cornell.med.icb.R;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
+import org.junit.After;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import org.junit.Before;
 import org.junit.Test;
 import org.rosuda.REngine.Rserve.RConnection;
 import org.rosuda.REngine.Rserve.RserveException;
@@ -37,18 +39,45 @@ import java.util.concurrent.TimeUnit;
  */
 public class TestRConnectionPool {
     /**
+     * A pool configuration with a single server on localhost.
+      */
+    private static final String POOL_CONFIGURATION_XML =
+            "<RConnectionPool><RServer host=\"localhost\"/></RConnectionPool>";
+
+    /**
+     * The connection pool under test.  We store it so that it can be shutdown properly.
+     */
+    private RConnectionPool pool;
+
+    /**
+     * Reset the pool before each test.
+     */
+    @Before
+    public void startup() {
+        pool = null;
+    }
+
+    /**
+     * Shutdown the pool after each test.
+     */
+    @After
+    public void shutdown() {
+        if (pool != null) {
+            pool.shutdown();
+        }
+    }
+    /**
      * Validates that the connection pool will properly hand out a connection
      * to an active Rserve process.  Note: this test assumes that a Rserve
      * process is already running on localhost using the default port.
      * @throws ConfigurationException if there is a problem setting up the default test connection
+     * @throws RserveException if there is a problem with the connection to the Rserve process
      */
     @Test
     public void validConnection() throws ConfigurationException, RserveException {
-        // define a configuration with a single server on localhost
-        final String xml = "<RConnectionPool><RServer host=\"localhost\"/></RConnectionPool>";
         final XMLConfiguration configuration = new XMLConfiguration();
-        configuration.load(new StringReader(xml));
-        final RConnectionPool pool = new RConnectionPool(configuration);
+        configuration.load(new StringReader(POOL_CONFIGURATION_XML));
+        pool = new RConnectionPool(configuration);
         assertNotNull("Connection pool should never be null", pool);
         assertFalse("Everybody in - the pool should be open!", pool.isClosed());
 
@@ -104,10 +133,10 @@ public class TestRConnectionPool {
      * Validates that the connection pool will not allow connections to be handed out
      * when no valid servers were set.
      */
-    @Test(expected=IllegalStateException.class)
+    @Test(expected = IllegalStateException.class)
     public void noValidServers() {
         // set up a pool with an empty configuration
-        final RConnectionPool pool = new RConnectionPool(new XMLConfiguration());
+        pool = new RConnectionPool(new XMLConfiguration());
         assertNotNull("Connection pool should never be null", pool);
         assertTrue("The pool should not be open", pool.isClosed());
         assertEquals("There should be no connections", 0, pool.getNumberOfConnections());
@@ -116,5 +145,77 @@ public class TestRConnectionPool {
 
         // if we try to get a connection, we shouldn't be able to - there are none configured
         pool.borrowConnection();
+    }
+
+    @Test(expected = RserveException.class)
+    public void returnClosedConnection() throws ConfigurationException, RserveException {
+        final XMLConfiguration configuration = new XMLConfiguration();
+        configuration.load(new StringReader(POOL_CONFIGURATION_XML));
+        pool = new RConnectionPool(configuration);
+
+        assertNotNull("Connection pool should never be null", pool);
+        assertFalse("Everybody in - the pool should be open!", pool.isClosed());
+
+        assertEquals("There should be one connection", 1, pool.getNumberOfConnections());
+        assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
+        assertEquals("The connection should be idle", 1, pool.getNumberOfIdleConnections());
+
+        // get a connection from the pool
+        final RConnection connection = pool.borrowConnection();
+        assertNotNull("Connection should not be null", connection);
+        assertTrue("The connection should be connected to the server", connection.isConnected());
+
+        connection.close();
+        assertFalse("The connection should not be connected to the server anymore",
+                connection.isConnected());
+
+        // return the connection to the pool - this should not work
+        pool.returnConnection(connection);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void returnNullConnection() throws ConfigurationException, RserveException {
+        final XMLConfiguration configuration = new XMLConfiguration();
+        configuration.load(new StringReader(POOL_CONFIGURATION_XML));
+        pool = new RConnectionPool(configuration);
+        pool.returnConnection(null);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void borrowConnectionAfterShutdown() throws ConfigurationException, RserveException {
+        final XMLConfiguration configuration = new XMLConfiguration();
+        configuration.load(new StringReader(POOL_CONFIGURATION_XML));
+        pool = new RConnectionPool(configuration);
+        assertNotNull("Connection pool should never be null", pool);
+        assertFalse("Everybody in - the pool should be open!", pool.isClosed());
+        pool.shutdown();
+
+        assertNotNull("Connection pool should never be null", pool);
+        assertTrue("Everybody out of the pool!", pool.isClosed());
+
+        assertEquals("There should be no connections", 0, pool.getNumberOfConnections());
+        assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
+        assertEquals("No connections should be idle", 0, pool.getNumberOfIdleConnections());
+
+        pool.borrowConnection();
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void returnConnectionAfterShutdown() throws ConfigurationException, RserveException {
+        final XMLConfiguration configuration = new XMLConfiguration();
+        configuration.load(new StringReader(POOL_CONFIGURATION_XML));
+        pool = new RConnectionPool(configuration);
+
+        final RConnection connection = pool.borrowConnection();
+        assertNotNull("Connection should not be null", connection);
+        assertTrue("The connection should be connected to the server", connection.isConnected());
+
+        pool.shutdown();
+
+        assertNotNull("Connection should not be null", connection);
+        assertFalse("The connection should not be connected to the server",
+                connection.isConnected());
+
+        pool.returnConnection(connection);
     }
 }
