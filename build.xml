@@ -32,6 +32,7 @@
 
     <path id="classpath">
         <pathelement location="${classes}"/>
+        <pathelement location="${config}"/>
         <path refid="compile.classpath"/>
     </path>
 
@@ -54,6 +55,9 @@
     </target>
 
     <target name="jar" depends="compile" description="Create a jar file for clustering tools">
+        <manifestclasspath property="jar.classpath" jarfile="${jarfile}">
+            <classpath refid="compile.classpath"/>
+        </manifestclasspath>
         <jar jarfile="${jarfile}">
             <manifest>
                 <attribute name="Specification-Title" value="R Utilities"/>
@@ -62,6 +66,8 @@
                 <attribute name="Implementation-Version" value="${label} (${buildstamp})"/>
                 <attribute name="Implementation-Vendor"
                            value="Institute for Computational Biomedicine (ICB), Weill Medical College of Cornell University"/>
+                <attribute name="Main-Class" value="edu.cornell.med.icb.R.RUtils"/>
+                <attribute name="Class-Path" value="${jar.classpath}"/>
             </manifest>
             <fileset dir="${classes}"/>
         </jar>
@@ -76,14 +82,12 @@
                  sourcepath="${src}" destdir="${javadocs}" encoding="UTF-8"
                  author="true" version="true" windowtitle="R Utilities API ${label} (${buildstamp})"
                  header="R Utilities API ${label} (${buildstamp})">
-            <link href="http://java.sun.com/j2se/1.5/docs/api/"/>
+            <link href="http://java.sun.com/javase/6/docs/api/"/>
             <link href="http://commons.apache.org/cli/api-release/"/>
             <link href="http://commons.apache.org/configuration/apidocs/"/>
-            <link href="http://commons.apache.org/digester/commons-digester-1.8/docs/api/"/>
             <link href="http://commons.apache.org/io/api-release/"/>
             <link href="http://commons.apache.org/lang/api-release/"/>
             <link href="http://commons.apache.org/logging/commons-logging-1.1/apidocs/"/>
-            <link href="http://commons.apache.org/pool/apidocs/"/>
             <link href="http://icbtools.med.cornell.edu/javadocs/Rserve/"/>
             <classpath>
                 <path refid="compile.classpath"/>
