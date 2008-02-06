@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Configuration file for the connection pool to Rserve processes -->
+<RConnectionPool>
+    <!-- default Rserve process running on localhost -->
+    <RServer host="localhost"/>
+
+    <!-- Rserve process on localhost port 6312 -->
+<!--
+    <RServer host="127.0.0.1" port="6312"/>
+-->
+
+    <!-- Rserve process on foobar port 1234 with authentication -->
+<!--
+    <RServer host="foobar.med.cornell.edu" port="1234" username="me" password="mypassword"/>
+-->
+</RConnectionPool>

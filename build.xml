@@ -78,7 +78,7 @@
     <!-- =================================================================== -->
     <target name="javadocs" depends="init" description="generates the API documentation">
         <mkdir dir="${javadocs}"/>
-        <javadoc packagenames="edu.cornell.med.*"
+        <javadoc packagenames="edu.cornell.med.*" overview="${src}/overview.html"
                  sourcepath="${src}" destdir="${javadocs}" encoding="UTF-8"
                  author="true" version="true" windowtitle="R Utilities API ${label} (${buildstamp})"
                  header="R Utilities API ${label} (${buildstamp})">

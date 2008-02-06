@@ -46,15 +46,50 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <a href="http://commons.apache.org/pool/">commons pool</a> package however, this class does
  * not implement the interface because the commons pool package does not support JDK 1.5+
  * features at the time this class was written.
+ * <p>
+ * Rserve processes available to the pool are configured using a fairly simply xml file.  The
+ * root element is called {@code RConnectionPool} and the child nodes are called {@code RServer}.
+ * There should be one {@code Rserver} node per Rserve process you wish to be made available in
+ * the pool.  Each Rserve node has the following attributes:
+ * <ul>
+ * <li>host - The host/ip Rserve is running on (required)
+ * <li>port - The TCP port Rserve is listening on (default = 6311)
+ * <li>username - Username to supply for the connection
+ * <li>password - Password to supply for the connection
+ * </ul>
+ * The following configuration would make three servers available to the pool.
+ * <p><em><blockquote><pre>
+ * &lt;!-- Configuration file for the connection pool to Rserve processes --&gt;
+ * &lt;RConnectionPool&gt;
+ *    &lt;!-- default Rserve process running on localhost --&gt;
+ *    &lt;RServer host="localhost"/&gt;
  *
- * Rserve processes available to the pool are configured using a fairly simply xml file.
- * TODO: Describe file an example of how to configure
+ *    &lt;!-- Rserve process on localhost port 6312 --&gt;
+ *    &lt;RServer host="127.0.0.1" port="6312"/&gt;
  *
+ *    &lt;!-- Rserve process on foobar.med.cornell.edu port 1234 with authentication --&gt;
+ *    &lt;RServer host="foobar.med.cornell.edu" port="1234" username="me" password="mypassword"/&gt;
+ * &lt;/RConnectionPool&gt;
+ * </pre></blockquote></em>
+ *
+ * <p>
  * The preferred way to specify the configuration file is through the use of a
- * system property called "RConnectionPool.configuration". The property should be a valid url or
- * the name of a resource file that exists on the classpath.  In case the system property
- * RConnectionPool.configuration is not defined, then the resource will be set to its
- * default value of "RConnectionPool.xml".
+ * system property called {@code RConnectionPool.configuration}. The property should be a valid url
+ * or the name of a resource file that exists on the classpath.  In case the system property
+ * {@code RConnectionPool.configuration} is not defined, then the resource will be set to its
+ * default value of {@code RConnectionPool.xml}.
+ *
+ * <p>
+ * The connection pool is implmented using the
+ * <a href="http://en.wikipedia.org/wiki/Singleton_pattern">Singleton pattern</a>.
+ * Instances of the pool are not created by calling the constructor, but are retrieved using the
+ * static method {@link #getInstance()}.  Connections are retrieved from the pool using either
+ * {@link #borrowConnection()} or {@link #borrowConnection(long, java.util.concurrent.TimeUnit)}.
+ * Both versions will return a valid {@link org.rosuda.REngine.Rserve.RConnection} immediately
+ * if one is available.  The borrow method with no parameters will block if there are no
+ * connections available, while the latter form will wait until the timeout expires before
+ * returning {@code null}.  Connections borrowed from the pool should <strong>NOT</strong>
+ * be closed but should be returned to the pool which will handle closing the connections.
  */
 public final class RConnectionPool {
     /**
@@ -338,7 +373,7 @@ public final class RConnectionPool {
     }
 
     /**
-     * Shutdown this pool.
+     * Shutdown this pool and all connections assoicated with it.
      */
     public void shutdown() {
         synchronized (syncObject) {
@@ -397,13 +432,40 @@ public final class RConnectionPool {
     }
 
     /**
-     * Removes a session from the pool (presumably because there was an issue with the connection.
-     * The pool will be closed if this action leaves no valid sessions.
+     * Removes a session from the pool (presumably because there was an issue with the connection
+     * to the Rserve process.  The pool will be closed if this action leaves no valid sessions.
      * @param session The session to remove.
      */
     private void invalidateSession(final RSession session) {
         synchronized (syncObject) {
             if (sessions.remove(session) && numberOfConnections.decrementAndGet() <= 0) {
+                shutdown();
+            }
+        }
+    }
+
+    /**
+     * Removes a connection from the pool (presumably because there was an issue with the
+     * connection to the Rserve process. The pool will be closed if this action leaves no valid
+     * sessions. The connection <strong>must</strong> have been obtained using this pool
+     * and not created externally.
+     * @param connection The connection to remove.
+     */
+    public void invalidateConnection(final RConnection connection) {
+        assertOpen();
+
+        if (!activeConnections.contains(connection)) {
+            throw new IllegalArgumentException("Connection is not managed by this pool");
+        }
+
+        // attempt to close the connection if we still can
+        if (connection.isConnected()) {
+            connection.close();
+        }
+
+        synchronized (syncObject) {
+            if (activeConnections.remove(connection)
+                    && numberOfConnections.decrementAndGet() <= 0) {
                 shutdown();
             }
         }
@@ -480,7 +542,7 @@ public final class RConnectionPool {
 
     /**
      * Return a connection to the pool. The connection <strong>must</strong> have been obtained
-     * using {@link #borrowConnection()}.
+     * using this pool and not created externally.
      * @param connection The connection to return
      * @throws RserveException if there is a problem with the connection
      */

@@ -246,4 +246,36 @@ public class TestRConnectionPool {
 
         pool.returnConnection(connection);
     }
+
+    /**
+     * Validates that the connections that have been invalidated are removed from the pool properly.
+     * @throws ConfigurationException if there is a problem setting up the default test connection
+     */
+    @Test
+    public void invalidateConnection() throws ConfigurationException {
+        final XMLConfiguration configuration = new XMLConfiguration();
+        configuration.load(new StringReader(POOL_CONFIGURATION_XML));
+        pool = new RConnectionPool(configuration);
+
+        final RConnection connection = pool.borrowConnection();
+        assertNotNull("Connection should not be null", connection);
+        assertTrue("The connection should be connected to the server", connection.isConnected());
+
+        assertFalse("The pool should be open", pool.isClosed());
+        assertEquals("There should be one connection", 1, pool.getNumberOfConnections());
+        assertEquals("The connection should active", 1, pool.getNumberOfActiveConnections());
+        assertEquals("No connections should be idle", 0, pool.getNumberOfIdleConnections());
+
+        pool.invalidateConnection(connection);
+
+        // the connection should no longer be connected
+        assertNotNull("Connection should not be null", connection);
+        assertFalse("The connection should not be connected to the server",
+                connection.isConnected());
+
+        assertEquals("There should be no connections", 0, pool.getNumberOfConnections());
+        assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
+        assertEquals("No connections should be idle", 0, pool.getNumberOfIdleConnections());
+        assertTrue("The pool should be closed", pool.isClosed());
+    }
 }
