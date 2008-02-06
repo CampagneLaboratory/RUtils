@@ -32,6 +32,10 @@ import org.rosuda.REngine.Rserve.RConnection;
 import org.rosuda.REngine.Rserve.RserveException;
 
 import java.io.StringReader;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -277,5 +281,49 @@ public class TestRConnectionPool {
         assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
         assertEquals("No connections should be idle", 0, pool.getNumberOfIdleConnections());
         assertTrue("The pool should be closed", pool.isClosed());
+    }
+
+    /**
+     * Checks that two threads actually get the same connection pool.
+     * @throws InterruptedException if the threads are interrupted during the test
+     */
+    @Test
+    public void validateSingleton() throws InterruptedException {
+        final RConnectionPool[] pools = new RConnectionPool[2];
+        final CountDownLatch latch = new CountDownLatch(2);
+        final ExecutorService threadPool = Executors.newCachedThreadPool();
+        try {
+            threadPool.submit(new Callable<Boolean>() {
+                public Boolean call() {
+                    pools[0] = RConnectionPool.getInstance();
+                    latch.countDown();
+                    return true;
+                }
+            });
+
+            threadPool.submit(new Callable<Boolean>() {
+                public Boolean call() {
+                    pools[1] = RConnectionPool.getInstance();
+                    latch.countDown();
+                    return true;
+                }
+            });
+
+            latch.await();
+
+            assertNotNull("Connection pool should never be null", pools[0]);
+            assertNotNull("Connection pool should never be null", pools[1]);
+            assertEquals("Pools should be the same", pools[0], pools[1]);
+        } finally {
+            threadPool.shutdown();
+
+            if (pools[0] != null) {
+                pools[0].shutdown();
+            }
+
+            if (pools[1] != null) {
+                pools[1].shutdown();
+            }
+        }
     }
 }
