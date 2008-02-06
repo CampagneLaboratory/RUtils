@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!-- Configuration file for the connection pool to Rserve processes -->
-<RConnectionPool>
+<RConnectionPool xsi:noNamespaceSchemaLocation="RConnectionPool.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <!-- default Rserve process running on localhost -->
     <RServer host="localhost"/>
 
