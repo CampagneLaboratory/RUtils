@@ -685,6 +685,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/RUtils.iml" filepath="$PROJECT_DIR$/RUtils.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../Rserve/src/client/Rserve.iml" filepath="$PROJECT_DIR$/../Rserve/src/client/Rserve.iml" />
     </modules>
   </component>
   <component name="ProjectRootManager" version="2" assert-keyword="true" jdk-15="true" project-jdk-name="1.6" project-jdk-type="JavaSDK">
@@ -740,6 +741,7 @@
   </component>
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="svn" />
+    <mapping directory="$PROJECT_DIR$/../Rserve/src/client" vcs="svn" />
   </component>
   <component name="WebServicesPlugin" addRequiredLibraries="true" />
   <component name="com.intellij.ide.util.scopeChooser.ScopeChooserConfigurable" proportions="" version="1">

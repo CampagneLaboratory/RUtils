@@ -87,10 +87,10 @@ public class RUtils {
         super();
     }
 
-    void startup() throws IOException {
+    void startup() {
         final Future<Boolean> server =
                 threadPool.submit(new Callable<Boolean>() {
-                    public Boolean call() throws Exception {
+                    public Boolean call() throws IOException {
                         final String[] command = {
                                 rServeCommand
                         };

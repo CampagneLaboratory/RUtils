@@ -285,10 +285,9 @@ public final class RConnectionPool {
 
     /**
      * Throws an {@link IllegalStateException} when this pool has been closed.
-     * @throws IllegalStateException when this pool has been closed.
      * @see #isClosed()
      */
-    private void assertOpen() throws IllegalStateException {
+    private void assertOpen() {
         if (isClosed()) {
             throw new IllegalStateException("Pool is not open");
         }
@@ -357,7 +356,7 @@ public final class RConnectionPool {
                 try {
                     final RConnection connection = session.attach();
                     connection.close();
-                } catch (RserveException e) {
+                } catch (RserveException e) {             // NOPMD
                     // silently ignore
                 }
                 sessionIterator.remove();
@@ -404,10 +403,8 @@ public final class RConnectionPool {
      */
     private void invalidateSession(final RSession session) {
         synchronized (syncObject) {
-            if (sessions.remove(session)) {
-                if (numberOfConnections.decrementAndGet() <= 0) {
-                    shutdown();
-                }
+            if (sessions.remove(session) && numberOfConnections.decrementAndGet() <= 0) {
+                shutdown();
             }
         }
     }

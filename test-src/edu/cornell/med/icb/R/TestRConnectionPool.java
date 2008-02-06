@@ -196,10 +196,9 @@ public class TestRConnectionPool {
      * Validates that the pool can be shut down properly and also that attempting to
      * get a connection after the pool has been shutdown throws an error.
      * @throws ConfigurationException if there is a problem setting up the default test connection
-     * @throws RserveException if there is a problem with the connection to the Rserve process
      */
     @Test(expected = IllegalStateException.class)
-    public void borrowConnectionAfterShutdown() throws ConfigurationException, RserveException {
+    public void borrowConnectionAfterShutdown() throws ConfigurationException {
         final XMLConfiguration configuration = new XMLConfiguration();
         configuration.load(new StringReader(POOL_CONFIGURATION_XML));
         pool = new RConnectionPool(configuration);
