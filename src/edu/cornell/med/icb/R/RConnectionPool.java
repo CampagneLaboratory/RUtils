@@ -373,9 +373,10 @@ public final class RConnectionPool {
     }
 
     /**
-     * Shutdown this pool and all connections assoicated with it.
+     * Shutdown this pool and all connections associated with it.
      */
     public void shutdown() {
+        LOG.debug("Shutting down the RConnectionPool");
         synchronized (syncObject) {
             final Iterator<RConnection> connectionIterator = activeConnections.iterator();
             while (connectionIterator.hasNext()) {
