@@ -80,7 +80,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * default value of {@code RConnectionPool.xml}.
  *
  * <p>
- * The connection pool is implmented using the
+ * The connection pool is implemented using the
  * <a href="http://en.wikipedia.org/wiki/Singleton_pattern">Singleton pattern</a>.
  * Instances of the pool are not created by calling the constructor, but are retrieved using the
  * static method {@link #getInstance()}.  Connections are retrieved from the pool using either
@@ -284,7 +284,7 @@ public final class RConnectionPool {
     }
 
     /**
-     * Adds a connection to the pool opf available connections.
+     * Adds a connection to the pool of available connections.
      * @param host Host where the command should be sent
      * @param port Port number where the command should be sent
      * @param username Username to send to the server if authentication is required
