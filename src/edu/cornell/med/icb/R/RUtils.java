@@ -25,6 +25,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.Parser;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +35,8 @@ import org.rosuda.REngine.Rserve.RSession;
 import org.rosuda.REngine.Rserve.RserveException;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -83,7 +87,7 @@ public class RUtils {
      * and also from the command line via the {@link #main(String[])} method.  Normally,
      * other classes should not be using this directly.
      */
-    RUtils() {
+    private RUtils() {
         super();
     }
 
@@ -157,7 +161,8 @@ public class RUtils {
         formatter.printHelp(RUtils.class.getName(), options, true);
     }
 
-    public static void main(final String[] args) throws ParseException, RserveException {
+    public static void main(final String[] args)
+            throws ParseException, RserveException, ConfigurationException {
         final Options options = new Options();
 
         final Option helpOption = new Option("h", "help", false, "Print this message");
@@ -165,6 +170,7 @@ public class RUtils {
 
         final Option shutdownOption =
                 new Option("s", "shutdown", false, "Shutdown a running Rserve process");
+        shutdownOption.setRequired(true);
         options.addOption(shutdownOption);
 
         final Option portOption = new Option("port", "port", true,
@@ -191,19 +197,56 @@ public class RUtils {
         passwordOption.setType(String.class);
         options.addOption(passwordOption);
 
+        final Option configurationOption =
+                new Option("c", "configuration", true, "Configuration file or url to read from");
+        configurationOption.setArgName("configuration");
+        configurationOption.setType(String.class);
+        options.addOption(configurationOption);
+
         final Parser parser = new BasicParser();
         final CommandLine commandLine = parser.parse(options, args);
-
-        final String host = commandLine.getOptionValue("host", "localhost");
-        final int port = Integer.valueOf(commandLine.getOptionValue("port", "6311"));
-        final String username = commandLine.getOptionValue("username");
-        final String password = commandLine.getOptionValue("password");
 
         if (commandLine.hasOption("h")) {
             usage(options);
         } else if (commandLine.hasOption("shutdown")) {
             final RUtils rUtils = new RUtils();
-            rUtils.shutdown(host, port, username, password);
+
+            if (commandLine.hasOption("configuration")) {
+                final String configurationFile = commandLine.getOptionValue("configuration");
+                LOG.info("Reading configuration from " + configurationFile);
+                XMLConfiguration configuration;
+                try {
+                    final URL configurationURL = new URL(configurationFile);
+                    configuration = new XMLConfiguration(configurationURL);
+                } catch (MalformedURLException e) {
+                    // resource is not a URL: attempt to get the resource from a file
+                    LOG.debug("Configuration is not a valid url");
+                    configuration = new XMLConfiguration(configurationFile);
+                }
+
+                configuration.setValidating(true);
+                final int numberOfRServers = configuration.getMaxIndex("RServer") + 1;
+                for (int i = 0; i < numberOfRServers; i++) {
+                    final String server = "RServer(" + i + ")";
+                    final String host = configuration.getString(server + "[@host]");
+                    final int port = configuration.getInt(server + "[@port]",
+                            RConfiguration.DEFAULT_RSERVE_PORT);
+                    final String username = configuration.getString(server + "[@username]");
+                    final String password = configuration.getString(server + "[@password]");
+                    try {
+                        rUtils.shutdown(host, port, username, password);
+                    } catch (RserveException e) {
+                        // just let the user know and try the other servers
+                        LOG.warn("Couldn't shutdown Rserve on " + host + ":" + port, e);
+                    }
+                }
+            } else {
+                final String host = commandLine.getOptionValue("host", "localhost");
+                final int port = Integer.valueOf(commandLine.getOptionValue("port", "6311"));
+                final String username = commandLine.getOptionValue("username");
+                final String password = commandLine.getOptionValue("password");
+                rUtils.shutdown(host, port, username, password);
+            }
         } else {
             usage(options);
         }

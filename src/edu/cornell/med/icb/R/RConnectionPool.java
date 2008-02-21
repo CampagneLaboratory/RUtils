@@ -18,9 +18,7 @@
 
 package edu.cornell.med.icb.R;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.SystemConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,7 +26,6 @@ import org.rosuda.REngine.Rserve.RConnection;
 import org.rosuda.REngine.Rserve.RSession;
 import org.rosuda.REngine.Rserve.RserveException;
 
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
@@ -98,22 +95,6 @@ public final class RConnectionPool {
     private static final Log LOG = LogFactory.getLog(RConnectionPool.class);
 
     /**
-     * Name of the system environment property that will set a configuration file to use.
-     * #DEFAULT_CONFIGURATION_FILE will be used if this property is not set.
-     */
-    private static final String DEFAULT_CONFIGURATION_KEY = "RConnectionPool.configuration";
-
-    /**
-     * Name of the default configuration file if one is not specified in the environment.
-     */
-    private static final String DEFAULT_XML_CONFIGURATION_FILE = "RConnectionPool.xml";
-
-    /**
-     * Default port for Rserve process if one was not specified.
-     */
-    private static final int DEFAULT_RSERVE_PORT = 6311;
-
-    /**
      * Indicates that that connection pool has been closed and not available for use.
      */
     private final AtomicBoolean closed = new AtomicBoolean();
@@ -161,22 +142,7 @@ public final class RConnectionPool {
     private RConnectionPool() {
         super();
 
-        URL poolConfigURL;
-
-        // if the user defined a configuration, use it
-        final Configuration systemConfiguration = new SystemConfiguration();
-        if (systemConfiguration.containsKey(DEFAULT_CONFIGURATION_KEY)) {
-            final String poolConfig = systemConfiguration.getString(DEFAULT_CONFIGURATION_KEY);
-            try {
-                poolConfigURL = new URL(poolConfig);
-            } catch (MalformedURLException e) {
-                // resource is not a URL: attempt to get the resource from the class path
-                poolConfigURL = getResource(poolConfig);
-            }
-        } else {
-            poolConfigURL = getResource(DEFAULT_XML_CONFIGURATION_FILE);
-        }
-
+        final URL poolConfigURL = RConfiguration.getConfigurationURL();
         if (LOG.isInfoEnabled()) {
             LOG.info("Configuring pool with: " + poolConfigURL);
         }
@@ -187,41 +153,6 @@ public final class RConnectionPool {
             LOG.error("Cannot read configuration: " + poolConfigURL, e);
             closed.set(true);
         }
-    }
-
-    /**
-     * Search for a resource using the thread context class loader. If that fails, search
-     * using the class loader that loaded this class.  If that still fails, try one last
-     * time with {@link ClassLoader#getSystemResource(String)}.
-     * @param resource The resource to search for
-     * @return A url representing the resource or {@code null} if the resource was not found
-     */
-    private URL getResource(final String resource) {
-        URL url;   // get the configuration from the classpath of the current thread
-        ClassLoader loader = Thread.currentThread().getContextClassLoader();
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Trying to find [" + resource + "] using context class loader " + loader);
-        }
-
-        url = loader.getResource(resource);
-        if (url == null) {
-            // We couldn't find resource - now try with the class loader that loaded this class
-            loader = RConnectionPool.class.getClassLoader();     // NOPMD
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Trying to find [" + resource + "] using class loader " + loader);
-            }
-            url = loader.getResource(resource);
-        }
-
-        if (url == null) {
-            // make a last attempt to get the resource from the class path
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Trying to find [" + resource + "] using system class loader");
-            }
-            url = ClassLoader.getSystemResource(resource);
-        }
-
-        return url;
     }
 
     /**
@@ -256,7 +187,8 @@ public final class RConnectionPool {
         for (int i = 0; i < numberOfRServers; i++) {
             final String server = "RServer(" + i + ")";
             final String host = configuration.getString(server + "[@host]");
-            final int port = configuration.getInt(server + "[@port]", DEFAULT_RSERVE_PORT);
+            final int port =
+                    configuration.getInt(server + "[@port]", RConfiguration.DEFAULT_RSERVE_PORT);
             final String username = configuration.getString(server + "[@username]");
             final String password = configuration.getString(server + "[@password]");
 
