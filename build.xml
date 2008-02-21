@@ -88,7 +88,7 @@
             </zipgroupfileset>
             <fileset dir="${config}">
                 <include name="log4j.properties"/>
-            </fileset>            
+            </fileset>
         </jar>
     </target>
 
@@ -138,4 +138,13 @@
     <target name="cruisecontrol" depends="clean, cobertura-setup, findbugs,
                   test, jar, javadocs, pmd, cpd, checkstyle, cobertura-report"
             description="Run CruiseControl Build and Tests"/>
+
+    <target name="shutdown" depends="compile" description="Shut down Rserve instances defined in a configuration file">
+        <java classname="edu.cornell.med.icb.R.RUtils" fork="true" failonerror="true">
+            <classpath refid="classpath"/>
+            <arg value="--shutdown"/>
+            <arg value="--configuration"/>
+            <arg value="${config}/RConnectionPool.xml"/>
+        </java>
+    </target>
 </project>
