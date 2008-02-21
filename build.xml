@@ -16,6 +16,7 @@
     <property name="logs" location="logs"/>
     <property name="test-src" location="test-src"/>
     <property name="jarfile" value="icb-rutils.jar"/>
+    <property name="api-jarfile" value="icb-rutils-api.jar"/>
 
     <!-- compiler and javadoc settings -->
     <property name="debug" value="on"/>
@@ -54,10 +55,23 @@
         </javac>
     </target>
 
-    <target name="jar" depends="compile" description="Create a jar file for clustering tools">
-        <manifestclasspath property="jar.classpath" jarfile="${jarfile}">
-            <classpath refid="compile.classpath"/>
-        </manifestclasspath>
+    <target name="jar" depends="jar-api, jar-full" description="Create jar files for R Utilities"/>
+
+    <target name="jar-api" depends="compile" description="Create a jar file for for R Utilities API">
+        <jar jarfile="${api-jarfile}">
+            <manifest>
+                <attribute name="Specification-Title" value="R Utilities"/>
+                <attribute name="Specification-Vendor"
+                           value="Institute for Computational Biomedicine (ICB), Weill Medical College of Cornell University"/>
+                <attribute name="Implementation-Version" value="${label} (${buildstamp})"/>
+                <attribute name="Implementation-Vendor"
+                           value="Institute for Computational Biomedicine (ICB), Weill Medical College of Cornell University"/>
+            </manifest>
+            <fileset dir="${classes}"/>
+        </jar>
+    </target>
+
+    <target name="jar-full" depends="compile" description="Create a jar file for for R Utilities API">
         <jar jarfile="${jarfile}">
             <manifest>
                 <attribute name="Specification-Title" value="R Utilities"/>
@@ -67,9 +81,14 @@
                 <attribute name="Implementation-Vendor"
                            value="Institute for Computational Biomedicine (ICB), Weill Medical College of Cornell University"/>
                 <attribute name="Main-Class" value="edu.cornell.med.icb.R.RUtils"/>
-                <attribute name="Class-Path" value="${jar.classpath}"/>
             </manifest>
             <fileset dir="${classes}"/>
+            <zipgroupfileset dir="${lib}">
+                <include name="*.jar"/>
+            </zipgroupfileset>
+            <fileset dir="${config}">
+                <include name="log4j.properties"/>
+            </fileset>            
         </jar>
     </target>
 
