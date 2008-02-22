@@ -24,9 +24,14 @@
 								<xs:documentation>Username to suppy for the connection.</xs:documentation>
 							</xs:annotation>
 						</xs:attribute>
-						<xs:attribute name="password">
+						<xs:attribute name="password" type="xs:string">
 							<xs:annotation>
 								<xs:documentation>Password to supply for the connection.</xs:documentation>
+							</xs:annotation>
+						</xs:attribute>
+						<xs:attribute name="command" type="xs:string">
+							<xs:annotation>
+								<xs:documentation>Full command used to start a Rserve process</xs:documentation>
 							</xs:annotation>
 						</xs:attribute>
 						<xs:attribute name="embedded" type="xs:boolean" default="false">

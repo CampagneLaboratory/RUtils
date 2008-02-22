@@ -10,6 +10,7 @@
       <properties />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="RUtils" />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="Rserve" />
+      <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="SSHExec" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="All in RUtils" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionFactory.getConnection" />
@@ -692,6 +693,38 @@
   </component>
   <component name="ProjectRootManager" version="2" assert-keyword="true" jdk-15="true" project-jdk-name="1.6" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
+  </component>
+  <component name="ProjectRunConfigurationManager">
+    <configuration default="false" name="RUtils" type="Application" factoryName="Application" enabled="false" merge="false">
+      <option name="MAIN_CLASS_NAME" value="edu.cornell.med.icb.R.RUtils" />
+      <option name="VM_PARAMETERS" value="" />
+      <option name="PROGRAM_PARAMETERS" value="--startup --configuration &quot;C:\Documents and Settings\Marko\My Documents\IdeaProjects\RUtils\config\RConnectionPool.xml&quot;" />
+      <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" value="" />
+      <option name="ENABLE_SWING_INSPECTOR" value="false" />
+      <option name="ENV_VARIABLES" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <module name="RUtils" />
+      <envs />
+      <RunnerSettings RunnerId="Debug">
+        <option name="DEBUG_PORT" value="3399" />
+        <option name="TRANSPORT" value="0" />
+        <option name="LOCAL" value="true" />
+      </RunnerSettings>
+      <RunnerSettings RunnerId="JProfiler">
+        <option name="WINDOW" value="false" />
+        <option name="JVMPI" value="false" />
+        <option name="INTERPRETED" value="false" />
+      </RunnerSettings>
+      <RunnerSettings RunnerId="Run" />
+      <ConfigurationWrapper RunnerId="Debug" />
+      <ConfigurationWrapper RunnerId="Run" />
+      <method>
+        <option name="Run Ant target" value="true" />
+        <option name="Make" value="false" />
+      </method>
+    </configuration>
   </component>
   <component name="ResourceManagerContainer">
     <option name="myResourceBundles">

@@ -22,11 +22,15 @@ import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.Parser;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,9 +38,14 @@ import org.rosuda.REngine.Rserve.RConnection;
 import org.rosuda.REngine.Rserve.RSession;
 import org.rosuda.REngine.Rserve.RserveException;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -91,23 +100,55 @@ public class RUtils {
         super();
     }
 
-    void startup() {
+    /**
+     * Can be used to start a rserve instance.
+     * @param rServeCommand Full path to command used to start Rserve process
+     * @param host Host where the command should be sent
+     * @param port Port number where the command should be sent
+     * @param username Username to send to the server if authentication is required
+     * @param password Password to send to the server if authentication is required
+     */
+    void startup(final String rServeCommand,
+                 final String host, final int port,
+                 final String username, final String password) {
+        if (LOG.isInfoEnabled()) {
+            LOG.info("Attempting to start Rserve on " + port);
+        }
+
         final Future<Boolean> server =
                 threadPool.submit(new Callable<Boolean>() {
                     public Boolean call() throws IOException {
-                        final String[] command = {
-                                rServeCommand
-                        };
+                        final List<String> commands = new ArrayList<String>();
+                        commands.add("ssh");
+                        commands.add(host);
+                        CollectionUtils.addAll(commands, rServeCommand.split(" "));
+                        commands.add("--RS-port");
+                        commands.add(Integer.toString(port));
+
+                        final String[] command = commands.toArray(new String[commands.size()]);
+                        LOG.debug(ArrayUtils.toString(commands));
+
                         final ProcessBuilder builder = new ProcessBuilder(command);
                         builder.redirectErrorStream(true);
                         final Process process = builder.start();
+                        BufferedReader br = null;
                         try {
+                            final InputStream is = process.getInputStream();
+                            final InputStreamReader isr = new InputStreamReader(is);
+                            br = new BufferedReader(isr);
+                            String line;
+                            while ((line = br.readLine()) != null) {
+                                LOG.debug(line);
+                            }
+
                             process.waitFor();
                             LOG.info("Program terminated!");
                         } catch (InterruptedException e) {
                             LOG.error("Interrupted!", e);
                             process.destroy();
                             Thread.currentThread().interrupt();
+                        } finally {
+                            IOUtils.closeQuietly(br);
                         }
 
                         return true;
@@ -168,10 +209,16 @@ public class RUtils {
         final Option helpOption = new Option("h", "help", false, "Print this message");
         options.addOption(helpOption);
 
+        final Option startupOption =
+                new Option("startup", "startup", false, "Start Rserve process");
         final Option shutdownOption =
-                new Option("s", "shutdown", false, "Shutdown a running Rserve process");
-        shutdownOption.setRequired(true);
-        options.addOption(shutdownOption);
+                new Option("shutdown", "shutdown", false, "Shutdown Rserve process");
+
+        final OptionGroup optionGroup = new OptionGroup();
+        optionGroup.addOption(startupOption);
+        optionGroup.addOption(shutdownOption);
+        optionGroup.setRequired(true);
+        options.addOptionGroup(optionGroup);
 
         final Option portOption = new Option("port", "port", true,
                         "Use specified port to communicate with the Rserve process");
@@ -208,7 +255,8 @@ public class RUtils {
 
         if (commandLine.hasOption("h")) {
             usage(options);
-        } else if (commandLine.hasOption("shutdown")) {
+        } else {
+            final boolean shutdown = commandLine.hasOption("shutdown");
             final RUtils rUtils = new RUtils();
 
             if (commandLine.hasOption("configuration")) {
@@ -233,8 +281,15 @@ public class RUtils {
                             RConfiguration.DEFAULT_RSERVE_PORT);
                     final String username = configuration.getString(server + "[@username]");
                     final String password = configuration.getString(server + "[@password]");
+                    final String command = configuration.getString(server + "[@command]",
+                            DEFAULT_RSERVE_COMMAND);
+
                     try {
-                        rUtils.shutdown(host, port, username, password);
+                        if (shutdown) {
+                            rUtils.shutdown(host, port, username, password);
+                        } else {
+                            rUtils.startup(command, host, port, username, password);
+                        }
                     } catch (RserveException e) {
                         // just let the user know and try the other servers
                         LOG.warn("Couldn't shutdown Rserve on " + host + ":" + port, e);
@@ -245,10 +300,14 @@ public class RUtils {
                 final int port = Integer.valueOf(commandLine.getOptionValue("port", "6311"));
                 final String username = commandLine.getOptionValue("username");
                 final String password = commandLine.getOptionValue("password");
-                rUtils.shutdown(host, port, username, password);
+
+                if (shutdown) {
+                    rUtils.shutdown(host, port, username, password);
+                } else {
+                    rUtils.startup(DEFAULT_RSERVE_COMMAND, host, port, username, password);
+                }
             }
-        } else {
-            usage(options);
+            rUtils.threadPool.shutdown();
         }
     }
 }

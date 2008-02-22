@@ -139,6 +139,15 @@
                   test, jar, javadocs, pmd, cpd, checkstyle, cobertura-report"
             description="Run CruiseControl Build and Tests"/>
 
+    <target name="startup" depends="compile" description="Start Rserve instances defined in a configuration file">
+        <java classname="edu.cornell.med.icb.R.RUtils" fork="true" failonerror="true">
+            <classpath refid="classpath"/>
+            <arg value="--startup"/>
+            <arg value="--configuration"/>
+            <arg value="${config}/RConnectionPool.xml"/>
+        </java>
+    </target>
+
     <target name="shutdown" depends="compile" description="Shut down Rserve instances defined in a configuration file">
         <java classname="edu.cornell.med.icb.R.RUtils" fork="true" failonerror="true">
             <classpath refid="classpath"/>
