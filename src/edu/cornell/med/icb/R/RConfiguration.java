@@ -22,9 +22,11 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.SystemConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -89,7 +91,28 @@ class RConfiguration {
             }
         } else {
             poolConfigURL = getResource(DEFAULT_XML_CONFIGURATION_FILE);
-        }
+	    // try a resource in the config directory
+	    if (poolConfigURL == null) {
+		if (LOG.isDebugEnabled()) {
+		    LOG.debug("Trying in the config directory");
+		}
+		
+		poolConfigURL = getResource("config/" + DEFAULT_XML_CONFIGURATION_FILE);
+	    }
+	    
+	    if (poolConfigURL == null) {
+		// make a last ditch effort to find the file in the a directory called config
+		try {	
+		if (LOG.isDebugEnabled()) {
+		    LOG.debug("Lsst try as a file in the config directory");
+		}
+		poolConfigURL = new File("config" + IOUtils.DIR_SEPARATOR
+					     + DEFAULT_XML_CONFIGURATION_FILE).toURI().toURL();
+		} catch (MalformedURLException e) {
+		    // resource is not a URL
+		}
+	    }
+	}
         return poolConfigURL;
     }
 
