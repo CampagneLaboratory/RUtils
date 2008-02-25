@@ -22,11 +22,11 @@
 
     <!-- Rserve process on 64 bit unix command to startup in normal mode-->
 <!--
-    <Rserve host="localhost" command="/softlib/exe/x86_64/pkg/R/2.6.1/gcc_64/lib64/R/bin/R CMD ~/R/x86_64-unknown-linux-gnu-library/2.6/Rserve/libs//Rserve-bin.so --no-save"/>
+	<RServer host="localhost" command="/softlib/exe/x86_64/pkg/R/2.6.1/gcc_64/lib64/R/bin/R CMD ~/R/x86_64-unknown-linux-gnu-library/2.6/Rserve/libs/Rserve-bin.so --no-save"/>
 -->
 
     <!-- Rserve process on 64 bit unix command to startup in debug mode-->
 <!--
-    <Rserve host="localhost" command="/softlib/exe/x86_64/pkg/R/2.6.1/gcc_64/lib64/R/bin/R CMD ~/R/x86_64-unknown-linux-gnu-library/2.6/Rserve/libs//Rserve-dbg.so --no-save"/>
+	<RServer host="localhost" command="/softlib/exe/x86_64/pkg/R/2.6.1/gcc_64/lib64/R/bin/R CMD ~/R/x86_64-unknown-linux-gnu-library/2.6/Rserve/libs/Rserve-dbg.so --no-save"/>
 -->
 </RConnectionPool>
