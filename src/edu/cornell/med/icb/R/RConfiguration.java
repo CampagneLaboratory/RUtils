@@ -104,7 +104,7 @@ final class RConfiguration {
                 // make a last ditch effort to find the file in the a directory called config
                 try {
                     if (LOG.isDebugEnabled()) {
-                        LOG.debug("Lsst try as a file in the config directory");
+                        LOG.debug("Last try as a file in the config directory");
                     }
                     poolConfigURL = new File("config" + IOUtils.DIR_SEPARATOR
                             + DEFAULT_XML_CONFIGURATION_FILE).toURI().toURL();

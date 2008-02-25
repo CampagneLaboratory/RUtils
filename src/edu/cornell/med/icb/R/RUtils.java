@@ -42,6 +42,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -49,7 +50,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 /**
  * Class used to start and stop instances of the R server from within the JVM.
@@ -115,45 +115,50 @@ public final class RUtils {
             LOG.info("Attempting to start Rserve on " + port);
         }
 
-        final Future<Boolean> server =
-                threadPool.submit(new Callable<Boolean>() {
-                    public Boolean call() throws IOException {
-                        final List<String> commands = new ArrayList<String>();
-                        commands.add("ssh");
-                        commands.add(host);
-                        CollectionUtils.addAll(commands, rServeCommand.split(" "));
-                        commands.add("--RS-port");
-                        commands.add(Integer.toString(port));
+        threadPool.submit(new Callable<Boolean>() {
+            public Boolean call() throws IOException {
+                final List<String> commands = new ArrayList<String>();
 
-                        final String[] command = commands.toArray(new String[commands.size()]);
-                        LOG.debug(ArrayUtils.toString(commands));
+                // if the host is not local, use ssh to exec the command
+                if (!"localhost".equals(host) && !"127.0.0.1".equals(host)
+                    && !InetAddress.getLocalHost().equals(InetAddress.getByName(host))) {
+                    commands.add("ssh");
+                    commands.add(host);
+                }
 
-                        final ProcessBuilder builder = new ProcessBuilder(command);
-                        builder.redirectErrorStream(true);
-                        final Process process = builder.start();
-                        BufferedReader br = null;
-                        try {
-                            final InputStream is = process.getInputStream();
-                            final InputStreamReader isr = new InputStreamReader(is);
-                            br = new BufferedReader(isr);
-                            String line;
-                            while ((line = br.readLine()) != null) {
-                                LOG.debug(line);
-                            }
+                CollectionUtils.addAll(commands, rServeCommand.split(" "));
+                commands.add("--RS-port");
+                commands.add(Integer.toString(port));
 
-                            process.waitFor();
-                            LOG.info("Program terminated!");
-                        } catch (InterruptedException e) {
-                            LOG.error("Interrupted!", e);
-                            process.destroy();
-                            Thread.currentThread().interrupt();
-                        } finally {
-                            IOUtils.closeQuietly(br);
-                        }
+                final String[] command = commands.toArray(new String[commands.size()]);
+                LOG.debug(ArrayUtils.toString(commands));
 
-                        return true;
+                final ProcessBuilder builder = new ProcessBuilder(command);
+                builder.redirectErrorStream(true);
+                final Process process = builder.start();
+                BufferedReader br = null;
+                try {
+                    final InputStream is = process.getInputStream();
+                    final InputStreamReader isr = new InputStreamReader(is);
+                    br = new BufferedReader(isr);
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        LOG.debug(line);
                     }
-                });
+
+                    process.waitFor();
+                    LOG.info("Program terminated!");
+                } catch (InterruptedException e) {
+                    LOG.error("Interrupted!", e);
+                    process.destroy();
+                    Thread.currentThread().interrupt();
+                } finally {
+                    IOUtils.closeQuietly(br);
+                }
+
+                return true;
+            }
+        });
 
     }
 
@@ -221,7 +226,7 @@ public final class RUtils {
         options.addOptionGroup(optionGroup);
 
         final Option portOption = new Option("port", "port", true,
-                        "Use specified port to communicate with the Rserve process");
+                "Use specified port to communicate with the Rserve process");
         portOption.setArgName("port");
         portOption.setType(int.class);
         options.addOption(portOption);
@@ -251,7 +256,13 @@ public final class RUtils {
         options.addOption(configurationOption);
 
         final Parser parser = new BasicParser();
-        final CommandLine commandLine = parser.parse(options, args);
+        final CommandLine commandLine;
+        try {
+            commandLine = parser.parse(options, args);
+        } catch (ParseException e) {
+            usage(options);
+            throw e;
+        }
 
         if (commandLine.hasOption("h")) {
             usage(options);
