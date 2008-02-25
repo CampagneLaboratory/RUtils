@@ -55,7 +55,7 @@ import java.util.concurrent.Future;
  * Class used to start and stop instances of the R server from within the JVM.
  * @see <a href="http://www.rforge.net/Rserve/">Rserve - Binary R server</a>
  */
-public class RUtils {
+public final class RUtils {
     /**
      * Used to log debug and informational messages.
      */

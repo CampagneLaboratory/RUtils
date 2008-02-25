@@ -33,7 +33,7 @@ import java.net.URL;
 /**
  * Manages configuration of Rserve instances.
  */
-class RConfiguration {
+final class RConfiguration {
     /**
      * Used to log debug and informational messages.
      */
@@ -91,28 +91,28 @@ class RConfiguration {
             }
         } else {
             poolConfigURL = getResource(DEFAULT_XML_CONFIGURATION_FILE);
-	    // try a resource in the config directory
-	    if (poolConfigURL == null) {
-		if (LOG.isDebugEnabled()) {
-		    LOG.debug("Trying in the config directory");
-		}
-		
-		poolConfigURL = getResource("config/" + DEFAULT_XML_CONFIGURATION_FILE);
-	    }
-	    
-	    if (poolConfigURL == null) {
-		// make a last ditch effort to find the file in the a directory called config
-		try {	
-		if (LOG.isDebugEnabled()) {
-		    LOG.debug("Lsst try as a file in the config directory");
-		}
-		poolConfigURL = new File("config" + IOUtils.DIR_SEPARATOR
-					     + DEFAULT_XML_CONFIGURATION_FILE).toURI().toURL();
-		} catch (MalformedURLException e) {
-		    // resource is not a URL
-		}
-	    }
-	}
+            // try a resource in the config directory
+            if (poolConfigURL == null) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("Trying in the config directory");
+                }
+
+                poolConfigURL = getResource("config/" + DEFAULT_XML_CONFIGURATION_FILE);
+            }
+
+            if (poolConfigURL == null) {
+                // make a last ditch effort to find the file in the a directory called config
+                try {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Lsst try as a file in the config directory");
+                    }
+                    poolConfigURL = new File("config" + IOUtils.DIR_SEPARATOR
+                            + DEFAULT_XML_CONFIGURATION_FILE).toURI().toURL();
+                } catch (MalformedURLException e) {
+                    // resource is not a URL
+                }
+            }
+        }
         return poolConfigURL;
     }
 

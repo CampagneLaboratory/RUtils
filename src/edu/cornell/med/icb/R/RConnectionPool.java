@@ -153,6 +153,18 @@ public final class RConnectionPool {
             LOG.error("Cannot read configuration: " + poolConfigURL, e);
             closed.set(true);
         }
+
+        if (!closed.get()) {
+            // add a shutdown hook so that the pool is terminated cleanly on JVM exit
+            Runtime.getRuntime().addShutdownHook(
+                    new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {
+                        @Override
+                        public void run() {
+                            LOG.debug("Shutdown hook is shutting down the pool");
+                            shutdown();
+                        }
+                    });
+        }
     }
 
     /**
@@ -293,45 +305,35 @@ public final class RConnectionPool {
     }
 
     /**
-     * Shuts down the any connections left open from the pool.
-     * {@inheritDoc}
-     */
-    @Override
-    protected void finalize() throws Throwable {
-        if (!closed.get()) {
-            shutdown();
-        }
-        super.finalize();
-    }
-
-    /**
      * Shutdown this pool and all connections associated with it.
      */
     public void shutdown() {
-        LOG.debug("Shutting down the RConnectionPool");
-        synchronized (syncObject) {
-            final Iterator<RConnection> connectionIterator = activeConnections.iterator();
-            while (connectionIterator.hasNext()) {
-                final RConnection connection = connectionIterator.next();
-                connection.close();
-                connectionIterator.remove();
-                numberOfConnections.decrementAndGet();
-            }
-
-            final Iterator<RSession> sessionIterator = sessions.iterator();
-            while (sessionIterator.hasNext()) {
-                final RSession session = sessionIterator.next();
-                try {
-                    final RConnection connection = session.attach();
+        if (!closed.getAndSet(true)) {
+            LOG.debug("Shutting down the RConnectionPool");
+            synchronized (syncObject) {
+                final Iterator<RConnection> connectionIterator = activeConnections.iterator();
+                while (connectionIterator.hasNext()) {
+                    final RConnection connection = connectionIterator.next();
                     connection.close();
-                } catch (RserveException e) {             // NOPMD
-                    // silently ignore
+                    connectionIterator.remove();
+                    numberOfConnections.decrementAndGet();
                 }
-                sessionIterator.remove();
-                numberOfConnections.decrementAndGet();
+
+                final Iterator<RSession> sessionIterator = sessions.iterator();
+                while (sessionIterator.hasNext()) {
+                    final RSession session = sessionIterator.next();
+                    try {
+                        final RConnection connection = session.attach();
+                        connection.close();
+                    } catch (RserveException e) {             // NOPMD
+                        // silently ignore
+                    }
+                    sessionIterator.remove();
+                    numberOfConnections.decrementAndGet();
+                }
             }
         }
-        closed.set(true);
+
         // TODO: terminate embedded servers
     }
 
