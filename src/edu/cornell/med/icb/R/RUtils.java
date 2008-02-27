@@ -112,7 +112,7 @@ public final class RUtils {
                  final String host, final int port,
                  final String username, final String password) {
         if (LOG.isInfoEnabled()) {
-            LOG.info("Attempting to start Rserve on " + port);
+            LOG.info("Attempting to start Rserve on " + host + ":" + port);
         }
 
         threadPool.submit(new Callable<Boolean>() {
@@ -143,11 +143,15 @@ public final class RUtils {
                     br = new BufferedReader(isr);
                     String line;
                     while ((line = br.readLine()) != null) {
-                        LOG.debug(line);
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug(host + ":" + port + "> " + line);
+                        }
                     }
 
                     process.waitFor();
-                    LOG.info("Program terminated!");
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("Rserve on " + host + ":" + port + " terminated");
+                    }
                 } catch (InterruptedException e) {
                     LOG.error("Interrupted!", e);
                     process.destroy();
