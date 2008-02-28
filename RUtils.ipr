@@ -688,6 +688,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/RUtils.iml" filepath="$PROJECT_DIR$/RUtils.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../Rserve/src/client/Rserve.iml" filepath="$PROJECT_DIR$/../Rserve/src/client/Rserve.iml" />
     </modules>
   </component>
   <component name="ProjectRootManager" version="2" assert-keyword="true" jdk-15="true" project-jdk-name="1.6" project-jdk-type="JavaSDK">

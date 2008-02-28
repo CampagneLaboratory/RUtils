@@ -15,6 +15,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module" module-name="Rserve" />
     <orderEntry type="module-library">
       <library>
         <CLASSES>
@@ -103,15 +104,6 @@
       <library>
         <CLASSES>
           <root url="file://$MODULE_DIR$/config" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/Rserve.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
