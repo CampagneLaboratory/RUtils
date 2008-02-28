@@ -538,7 +538,7 @@ public final class RConnectionPool {
         /**
          * Used to synchronize code blocks.
          */
-        private final static Object holderSyncObject = new Object();
+        private static final Object holderSyncObject = new Object();
 
         /**
          * The singleton instance of the connection pool.
@@ -557,12 +557,14 @@ public final class RConnectionPool {
          * @return the singleton RConnectionPool
          */
         private static RConnectionPool getInstance() {
+            final RConnectionPool pool;
             synchronized (holderSyncObject) {
                 if (instance == null) {
                     instance = new RConnectionPool();
                 }
+                pool = instance;
             }
-            return instance;
+            return pool;
         }
 
         /**
@@ -571,27 +573,32 @@ public final class RConnectionPool {
          * @return the singleton RConnectionPool
          */
         private static RConnectionPool getInstance(final XMLConfiguration configuration) {
+            final RConnectionPool pool;
             synchronized (holderSyncObject) {
                 if (instance == null) {
                     instance = new RConnectionPool(configuration);
                 }
+                pool = instance;
             }
-            return instance;
+            return pool;
         }
 
         /**
          * Used to construct a singleton.
          * @param configurationURL configuration to use or null
          * @return the singleton RConnectionPool
+         * @throws ConfigurationException if the configuration cannot be built from the url
          */
         private static RConnectionPool getInstance(final URL configurationURL)
                 throws ConfigurationException {
+            final RConnectionPool pool;
             synchronized (holderSyncObject) {
                 if (instance == null) {
                     instance = new RConnectionPool(new XMLConfiguration(configurationURL));
                 }
+                pool = instance;
             }
-            return instance;
+            return pool;
         }
     }
 }

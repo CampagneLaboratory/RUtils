@@ -65,7 +65,7 @@ public final class RUtils {
     /**
      * An {@link java.util.concurrent.ExecutorService} that can be used to start new threads.
      */
-    ExecutorService threadPool = Executors.newCachedThreadPool();
+    final ExecutorService threadPool = Executors.newCachedThreadPool();
 
     /**
      * Default executable name for reserve platforms.
