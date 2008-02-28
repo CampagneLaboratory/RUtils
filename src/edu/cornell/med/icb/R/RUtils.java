@@ -333,7 +333,7 @@ public final class RUtils {
      * @return the XMLConfiguration
      * @throws ConfigurationException problem configuring with specified parameters
      */
-    public XMLConfiguration makeConfiguration(
+    public static XMLConfiguration makeConfiguration(
             final int port) throws ConfigurationException {
         return makeConfiguration("localhost", port, null, null);
     }
@@ -345,7 +345,7 @@ public final class RUtils {
      * @return the XMLConfiguration
      * @throws ConfigurationException problem configuring with specified parameters
      */
-    public XMLConfiguration makeConfiguration(
+    public static XMLConfiguration makeConfiguration(
             final String hostname, final int port) throws ConfigurationException {
         return makeConfiguration(hostname, port, null, null);
     }
@@ -359,7 +359,7 @@ public final class RUtils {
      * @return the XMLConfiguration
      * @throws ConfigurationException problem configuring with specified parameters
      */
-    public XMLConfiguration makeConfiguration(
+    public static XMLConfiguration makeConfiguration(
             final String hostname, final int port,
             final String username, final String password) throws ConfigurationException {
 

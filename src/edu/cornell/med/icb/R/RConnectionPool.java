@@ -177,18 +177,6 @@ public final class RConnectionPool {
             LOG.error("Cannot read configuration: " + poolConfigURL, e);
             closed.set(true);
         }
-
-        if (!closed.get()) {
-            // add a shutdown hook so that the pool is terminated cleanly on JVM exit
-            Runtime.getRuntime().addShutdownHook(
-                    new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {
-                        @Override
-                        public void run() {
-                            LOG.debug("Shutdown hook is shutting down the pool");
-                            shutdown();
-                        }
-                    });
-        }
     }
 
     /**
@@ -246,6 +234,16 @@ public final class RConnectionPool {
         if (numberOfConnections.get() == 0) {
             LOG.error("No valid servers found!  Closing pool");
             closed.set(true);
+        } else {
+            // add a shutdown hook so that the pool is terminated cleanly on JVM exit
+            Runtime.getRuntime().addShutdownHook(
+                    new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {
+                        @Override
+                        public void run() {
+                            LOG.debug("Shutdown hook is shutting down the pool");
+                            shutdown();
+                        }
+                    });
         }
 
         return !closed.get();
