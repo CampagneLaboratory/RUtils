@@ -99,7 +99,6 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="module" module-name="Rserve" />
     <orderEntry type="module-library">
       <library>
         <CLASSES>
@@ -112,12 +111,10 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/jsch-0.1.37.jar!/" />
+          <root url="jar://$MODULE_DIR$/lib/Rserve.jar!/" />
         </CLASSES>
         <JAVADOC />
-        <SOURCES>
-          <root url="jar://$MODULE_DIR$/../../../../../java/jsch-0.1.37.zip!/jsch-0.1.37/src" />
-        </SOURCES>
+        <SOURCES />
       </library>
     </orderEntry>
     <orderEntryProperties />

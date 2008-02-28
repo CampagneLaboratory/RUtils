@@ -89,6 +89,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * be closed but should be returned to the pool which will handle closing the connections.
  */
 public final class RConnectionPool {
+
     /**
      * Used to log debug and informational messages.
      */
@@ -127,12 +128,35 @@ public final class RConnectionPool {
      */
     private final Object syncObject = new Object();
 
+
     /**
      * Get the connection pool.
      * @return The connection pool instance.
      */
     public static RConnectionPool getInstance() {
-        return SingletonHolder.INSTANCE;
+        return SingletonHolder.getInstance();
+    }
+
+    /**
+     * Get the connection pool, suggeting a configuration
+     * if the pool is not already created with a different configuration.
+     * @param configuration desired configuiration for the pool
+     * @return The connection pool instance.
+     */
+    public static RConnectionPool getInstance(final XMLConfiguration configuration) {
+        return SingletonHolder.getInstance(configuration);
+    }
+
+    /**
+     * Get the connection pool, suggeting a configuration
+     * if the pool is not already created with a different configuration.
+     * @param configurationURL desired configuiration for the pool
+     * @return The connection pool instance.
+     * @throws ConfigurationException error configuring from the supplied URL
+     */
+    public static RConnectionPool getInstance(final URL configurationURL)
+            throws ConfigurationException {
+        return SingletonHolder.getInstance(configurationURL);
     }
 
     /**
@@ -512,6 +536,16 @@ public final class RConnectionPool {
      */
     private static final class SingletonHolder {
         /**
+         * Used to synchronize code blocks.
+         */
+        private final static Object holderSyncObject = new Object();
+
+        /**
+         * The singleton instance of the connection pool.
+         */
+        private static RConnectionPool instance;
+
+        /**
          * Used to construct a singleton.
          */
         private SingletonHolder() {
@@ -519,8 +553,45 @@ public final class RConnectionPool {
         }
 
         /**
-         * The singleton instance of the connection pool.
+         * Used to construct a singleton.
+         * @return the singleton RConnectionPool
          */
-        private static final RConnectionPool INSTANCE = new RConnectionPool();
+        private static RConnectionPool getInstance() {
+            synchronized (holderSyncObject) {
+                if (instance == null) {
+                    instance = new RConnectionPool();
+                }
+            }
+            return instance;
+        }
+
+        /**
+         * Used to construct a singleton.
+         * @param configuration configuration to use or null
+         * @return the singleton RConnectionPool
+         */
+        private static RConnectionPool getInstance(final XMLConfiguration configuration) {
+            synchronized (holderSyncObject) {
+                if (instance == null) {
+                    instance = new RConnectionPool(configuration);
+                }
+            }
+            return instance;
+        }
+
+        /**
+         * Used to construct a singleton.
+         * @param configurationURL configuration to use or null
+         * @return the singleton RConnectionPool
+         */
+        private static RConnectionPool getInstance(final URL configurationURL)
+                throws ConfigurationException {
+            synchronized (holderSyncObject) {
+                if (instance == null) {
+                    instance = new RConnectionPool(new XMLConfiguration(configurationURL));
+                }
+            }
+            return instance;
+        }
     }
 }

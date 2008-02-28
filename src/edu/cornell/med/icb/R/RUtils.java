@@ -42,6 +42,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -324,5 +325,62 @@ public final class RUtils {
             }
             rUtils.threadPool.shutdown();
         }
+    }
+
+    /**
+     * Make an an XMLConfiguration fo RConnectionPool.
+     * @param port the port on "localhost" to connect to
+     * @return the XMLConfiguration
+     * @throws ConfigurationException problem configuring with specified parameters
+     */
+    public XMLConfiguration makeConfiguration(
+            final int port) throws ConfigurationException {
+        return makeConfiguration("localhost", port, null, null);
+    }
+
+    /**
+     * Make an an XMLConfiguration fo RConnectionPool.
+     * @param hostname the hostname to connect to
+     * @param port the port on localhost to connect to
+     * @return the XMLConfiguration
+     * @throws ConfigurationException problem configuring with specified parameters
+     */
+    public XMLConfiguration makeConfiguration(
+            final String hostname, final int port) throws ConfigurationException {
+        return makeConfiguration(hostname, port, null, null);
+    }
+
+    /**
+     * Make an an XMLConfiguration fo RConnectionPool.
+     * @param hostname the hostname to connect to
+     * @param port the port on localhost to connect to
+     * @param username the username to use for the connection
+     * @param password the password to use for the connection
+     * @return the XMLConfiguration
+     * @throws ConfigurationException problem configuring with specified parameters
+     */
+    public XMLConfiguration makeConfiguration(
+            final String hostname, final int port,
+            final String username, final String password) throws ConfigurationException {
+
+        final StringBuilder xml = new StringBuilder();
+        xml.append("<?xml version='1.0' encoding='UTF-8'?>");
+        xml.append("<RConnectionPool xsi:noNamespaceSchemaLocation='RConnectionPool.xsd'");
+        xml.append(" xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>");
+        xml.append("<RServer ");
+        xml.append("host='").append(hostname).append("' ");
+        xml.append("port='").append(port).append("' ");
+        if (username != null) {
+            xml.append("username='").append(username).append("' ");
+        }
+        if (password != null) {
+            xml.append("password='").append(password).append("' ");
+        }
+        xml.append("/>");
+        xml.append("</RConnectionPool>");
+
+        final XMLConfiguration configuration = new XMLConfiguration();
+        configuration.load(new StringReader(xml.toString()));
+        return configuration;
     }
 }
