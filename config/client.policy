@@ -1,0 +1,3 @@
+grant codeBase "file:${user.home}/icb-rutils-api.jar" {
+    permission java.security.AllPermission;
+};
