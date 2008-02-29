@@ -294,7 +294,7 @@ public final class RUtils {
                     final String server = "RServer(" + i + ")";
                     final String host = configuration.getString(server + "[@host]");
                     final int port = configuration.getInt(server + "[@port]",
-                            RConfiguration.DEFAULT_RSERVE_PORT);
+                            RConfigurationUtils.DEFAULT_RSERVE_PORT);
                     final String username = configuration.getString(server + "[@username]");
                     final String password = configuration.getString(server + "[@password]");
                     final String command = configuration.getString(server + "[@command]",

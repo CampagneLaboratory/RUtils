@@ -89,7 +89,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * be closed but should be returned to the pool which will handle closing the connections.
  */
 public final class RConnectionPool {
-
     /**
      * Used to log debug and informational messages.
      */
@@ -138,9 +137,9 @@ public final class RConnectionPool {
     }
 
     /**
-     * Get the connection pool, suggeting a configuration
+     * Get the connection pool, suggesting a configuration
      * if the pool is not already created with a different configuration.
-     * @param configuration desired configuiration for the pool
+     * @param configuration desired configuration for the pool
      * @return The connection pool instance.
      */
     public static RConnectionPool getInstance(final XMLConfiguration configuration) {
@@ -148,9 +147,9 @@ public final class RConnectionPool {
     }
 
     /**
-     * Get the connection pool, suggeting a configuration
+     * Get the connection pool, suggesting a configuration
      * if the pool is not already created with a different configuration.
-     * @param configurationURL desired configuiration for the pool
+     * @param configurationURL desired configurationn for the pool
      * @return The connection pool instance.
      * @throws ConfigurationException error configuring from the supplied URL
      */
@@ -166,7 +165,7 @@ public final class RConnectionPool {
     private RConnectionPool() {
         super();
 
-        final URL poolConfigURL = RConfiguration.getConfigurationURL();
+        final URL poolConfigURL = RConfigurationUtils.getConfigurationURL();
         if (LOG.isInfoEnabled()) {
             LOG.info("Configuring pool with: " + poolConfigURL);
         }
@@ -212,7 +211,7 @@ public final class RConnectionPool {
             final String server = "RServer(" + i + ")";
             final String host = configuration.getString(server + "[@host]");
             final int port =
-                    configuration.getInt(server + "[@port]", RConfiguration.DEFAULT_RSERVE_PORT);
+                    configuration.getInt(server + "[@port]", RConfigurationUtils.DEFAULT_RSERVE_PORT);
             final String username = configuration.getString(server + "[@username]");
             final String password = configuration.getString(server + "[@password]");
 
