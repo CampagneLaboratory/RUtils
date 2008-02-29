@@ -19,6 +19,8 @@
 package edu.cornell.med.icb.R;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
 import java.io.Serializable;
@@ -30,7 +32,7 @@ public class RConfigurationItem implements Serializable {
     /**
      * Used during serialization.
      */
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /**
      * @serial The host/ip Rserve is running on.
@@ -110,5 +112,31 @@ public class RConfigurationItem implements Serializable {
     @Override
     public String toString() {
         return new ToStringBuilder(this).append("host", host).append("port", port).toString();
+    }
+
+    /**
+     * Indicates whether some other configuration is "equal to" this one.
+     * @param obj the reference object with which to compare.
+     * @return true if this object is the same as the obj argument; false otherwise.
+     */
+    @Override
+    public boolean equals(final Object obj) {
+        if (!(obj instanceof RConfigurationItem)) {
+            return false;
+        }
+        if (this == obj) {
+            return true;
+        }
+        final RConfigurationItem rhs = (RConfigurationItem) obj;
+        return new EqualsBuilder().append(host, rhs.host).append(port, rhs.port).isEquals();
+    }
+
+    /**
+     * Returns a hash code value for the object.
+     * @return a hash code value for this object.
+     */
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder().append(host).append(port).toHashCode();
     }
 }
