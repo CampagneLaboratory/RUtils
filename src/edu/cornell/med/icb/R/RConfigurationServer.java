@@ -35,20 +35,20 @@ final class RConfigurationServer implements RConfiguration {
      */
     private static final Log LOG = LogFactory.getLog(RConfigurationServer.class);
 
-    private final BlockingDeque<RConfigurationItem> configs =
+    private final BlockingDeque<RConfigurationItem> configurations =
             new LinkedBlockingDeque<RConfigurationItem>();
 
     private RConfigurationServer() {
         super();
-        configs.add(new RConfigurationItem("larry", 1234, null, null));
-        configs.add(new RConfigurationItem("curly", 42, null, null));
-        configs.add(new RConfigurationItem("moe", 6789, null, null));
+        configurations.add(new RConfigurationItem("larry", 1234, null, null));
+        configurations.add(new RConfigurationItem("curly", 42, null, null));
+        configurations.add(new RConfigurationItem("moe", 6789, null, null));
     }
 
     public RConfigurationItem borrowConfigurationItem() throws RemoteException {
         final RConfigurationItem item;
         try {
-            item = configs.takeFirst();
+            item = configurations.takeFirst();
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Giving out: " + item.getHost() + ":" + item.getPort());
             }
@@ -67,13 +67,15 @@ final class RConfigurationServer implements RConfiguration {
      * @param unit a <tt>TimeUnit</tt> determining how to interpret the <tt>timeout</tt> parameter
      * @return A valid object or null if no connection was available within the timeout period
      */
-    public RConfigurationItem borrowConfigurationItem(final long timeout, final TimeUnit unit) {
+    public RConfigurationItem borrowConfigurationItem(final long timeout, final TimeUnit unit)
+        throws RemoteException {
         RConfigurationItem item = null;
         try {
-            item = configs.pollFirst(timeout, unit);
+            item = configurations.pollFirst(timeout, unit);
         } catch (InterruptedException e) {
             LOG.warn("Interrupted", e);
             Thread.currentThread().interrupt();
+            throw new RemoteException(e.getMessage());
         }
         return item;
     }
@@ -82,7 +84,7 @@ final class RConfigurationServer implements RConfiguration {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Returning: " + item.getHost() + ":" + item.getPort());
         }
-        configs.add(item);
+        configurations.add(item);
     }
 
     public static void main(final String[] args) throws RemoteException {
