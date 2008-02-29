@@ -6,42 +6,87 @@
 			<xs:documentation>Defines characteristics of a pool of RServe instances that a client may connect to</xs:documentation>
 		</xs:annotation>
 		<xs:complexType>
-			<xs:sequence>
-				<xs:element name="RServer" maxOccurs="unbounded">
+			<xs:choice>
+				<xs:element name="RConfiguration">
+					<xs:annotation>
+						<xs:documentation>The pool will serve connections based on the local configuration.</xs:documentation>
+					</xs:annotation>
 					<xs:complexType>
-						<xs:attribute name="host" type="xs:string" use="required">
+						<xs:sequence>
+							<xs:element ref="RConfigurationServer" minOccurs="0">
+								<xs:annotation>
+									<xs:documentation>Location of the rmi server where configuration entries should be published (ignored if publish attribute is false)</xs:documentation>
+								</xs:annotation>
+							</xs:element>
+							<xs:element ref="RServer" maxOccurs="unbounded"/>
+						</xs:sequence>
+						<xs:attribute name="publish" type="xs:boolean" default="false">
 							<xs:annotation>
-								<xs:documentation>The host/ip Rserve is running on.</xs:documentation>
-							</xs:annotation>
-						</xs:attribute>
-						<xs:attribute name="port" type="xs:integer" default="6311">
-							<xs:annotation>
-								<xs:documentation>The TCP port Rserve is listening on.</xs:documentation>
-							</xs:annotation>
-						</xs:attribute>
-						<xs:attribute name="username" type="xs:string">
-							<xs:annotation>
-								<xs:documentation>Username to supply for the connection.</xs:documentation>
-							</xs:annotation>
-						</xs:attribute>
-						<xs:attribute name="password" type="xs:string">
-							<xs:annotation>
-								<xs:documentation>Password to supply for the connection.</xs:documentation>
-							</xs:annotation>
-						</xs:attribute>
-						<xs:attribute name="command" type="xs:string">
-							<xs:annotation>
-								<xs:documentation>Full command used to start a Rserve process</xs:documentation>
-							</xs:annotation>
-						</xs:attribute>
-						<xs:attribute name="embedded" type="xs:boolean" default="false">
-							<xs:annotation>
-								<xs:documentation>If true, the connection pool will attempt to mange the rserve process.  (Only applies when host is "localhost/127.0.0.1")</xs:documentation>
+								<xs:documentation>Whether or not the reserve configuration should be published to the rmi server.</xs:documentation>
 							</xs:annotation>
 						</xs:attribute>
 					</xs:complexType>
 				</xs:element>
-			</xs:sequence>
+				<xs:element ref="RConfigurationServer">
+					<xs:annotation>
+						<xs:documentation>Location of the rmi server that can provide an RConfigurationServer</xs:documentation>
+					</xs:annotation>
+				</xs:element>
+			</xs:choice>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="RServer">
+		<xs:annotation>
+			<xs:documentation>Each Rserve instance represents a host/ip that is running an active Rserve proecess</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:attribute name="host" type="xs:string" use="required">
+				<xs:annotation>
+					<xs:documentation>The host/ip Rserve is running on.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="port" type="xs:integer" default="6311">
+				<xs:annotation>
+					<xs:documentation>The TCP port Rserve is listening on.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="username" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Username to supply for the connection.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="password" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Password to supply for the connection.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="command" type="xs:string">
+				<xs:annotation>
+					<xs:documentation>Full command used to start a Rserve process</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="embedded" type="xs:boolean" default="false">
+				<xs:annotation>
+					<xs:documentation>If true, the connection pool will attempt to mange the rserve process.  (Only applies when host is "localhost/127.0.0.1") NOT YET IMPLEMENTED</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="RConfigurationServer">
+		<xs:annotation>
+			<xs:documentation>Represents an RMI server where the configurations of Rserve instances are found.</xs:documentation>
+		</xs:annotation>
+		<xs:complexType>
+			<xs:attribute name="host" type="xs:string" use="required">
+				<xs:annotation>
+					<xs:documentation>The host/ip the of an rmi server that the configuration can be found.</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
+			<xs:attribute name="port" type="xs:integer" default="1099">
+				<xs:annotation>
+					<xs:documentation>The port number of the rmi server</xs:documentation>
+				</xs:annotation>
+			</xs:attribute>
 		</xs:complexType>
 	</xs:element>
 </xs:schema>
