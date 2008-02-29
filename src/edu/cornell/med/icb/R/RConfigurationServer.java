@@ -27,6 +27,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 final class RConfigurationServer implements RConfiguration {
     /**
@@ -54,6 +55,25 @@ final class RConfigurationServer implements RConfiguration {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RemoteException(e.getMessage());
+        }
+        return item;
+    }
+
+    /**
+     * Get a configuration for an Rserve instance. If no items are available at the moment, this
+     * method will wait up to the specified wait time for a configuration to become available.
+     *
+     * @param timeout how long to wait before giving up, in units of <tt>unit</tt>
+     * @param unit a <tt>TimeUnit</tt> determining how to interpret the <tt>timeout</tt> parameter
+     * @return A valid object or null if no connection was available within the timeout period
+     */
+    public RConfigurationItem borrowConfigurationItem(final long timeout, final TimeUnit unit) {
+        RConfigurationItem item = null;
+        try {
+            item = configs.pollFirst(timeout, unit);
+        } catch (InterruptedException e) {
+            LOG.warn("Interrupted", e);
+            Thread.currentThread().interrupt();
         }
         return item;
     }
