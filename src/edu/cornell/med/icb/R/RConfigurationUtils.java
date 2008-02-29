@@ -133,7 +133,7 @@ final class RConfigurationUtils {
         url = loader.getResource(resource);
         if (url == null) {
             // We couldn't find resource - now try with the class loader that loaded this class
-            loader = RConnectionPool.class.getClassLoader();     // NOPMD
+            loader = RConfigurationUtils.class.getClassLoader();     // NOPMD
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Trying to find [" + resource + "] using class loader " + loader);
             }
