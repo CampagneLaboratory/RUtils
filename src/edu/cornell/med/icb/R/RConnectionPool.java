@@ -20,18 +20,17 @@ package edu.cornell.med.icb.R;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
+import org.apache.commons.configuration.reloading.FileChangedReloadingStrategy;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.rosuda.REngine.Rserve.RConnection;
-import org.rosuda.REngine.Rserve.RSession;
 import org.rosuda.REngine.Rserve.RserveException;
 
 import java.net.URL;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.Map;
 import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -85,8 +84,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Both versions will return a valid {@link org.rosuda.REngine.Rserve.RConnection} immediately
  * if one is available.  The borrow method with no parameters will block if there are no
  * connections available, while the latter form will wait until the timeout expires before
- * returning {@code null}.  Connections borrowed from the pool should <strong>NOT</strong>
- * be closed but should be returned to the pool which will handle closing the connections.
+ * returning {@code null}.
  */
 public final class RConnectionPool {
     /**
@@ -100,22 +98,18 @@ public final class RConnectionPool {
     private final AtomicBoolean closed = new AtomicBoolean();
 
     /**
-     * The list of sessions that can be used in the pool.  Note that
+     * The list of connections that can be used in the pool.  Note that
      * {@link org.rosuda.REngine.Rserve.RConnection} objects are not stored directly.
-     * Rather {@link org.rosuda.REngine.Rserve.RSession} objects are stored.  This means that
-     * the pool has actually established the connections to the servers at least once as
-     * this is the only way to get session objects.  The session objects are intentionally
-     * "hidden" from clients of the pool.  For this reason, public pool methods refer to
-     * "connections" and not sessions.  In reality, they can be viewed as different
-     * representations of the same concept.
+     * Rather information used to make the connection objects are stored.
      */
-    private final BlockingDeque<RSession> sessions = new LinkedBlockingDeque<RSession>();
+    private final BlockingDeque<RConnectionInfo> connections =
+            new LinkedBlockingDeque<RConnectionInfo>();
 
     /**
      * A list of connections that have been borrowed from the pool but not yet returned.
      */
-    private final Collection<RConnection> activeConnections =
-            Collections.synchronizedList(new LinkedList<RConnection>());
+    private final Map<RConnection, RConnectionInfo> activeConnectionMap =
+            new ConcurrentHashMap<RConnection, RConnectionInfo>();
 
     /**
      * The total number of sessions managed by this pool.
@@ -126,7 +120,6 @@ public final class RConnectionPool {
      * Used to synchronize code blocks.
      */
     private final Object syncObject = new Object();
-
 
     /**
      * Get the connection pool.
@@ -206,6 +199,7 @@ public final class RConnectionPool {
      */
     private boolean configure(final XMLConfiguration configuration) {
         configuration.setValidating(true);
+        configuration.setReloadingStrategy(new FileChangedReloadingStrategy());
         final int numberOfRServers = configuration.getMaxIndex("RServer") + 1;
         for (int i = 0; i < numberOfRServers; i++) {
             final String server = "RServer(" + i + ")";
@@ -239,8 +233,8 @@ public final class RConnectionPool {
                     new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {
                         @Override
                         public void run() {
-                            LOG.debug("Shutdown hook is shutting down the pool");
-                            shutdown();
+                            LOG.debug("Shutdown hook is closing the pool");
+                            close();
                         }
                     });
         }
@@ -263,24 +257,9 @@ public final class RConnectionPool {
                                   final String password) throws RserveException {
         assertOpen();
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Attempting connection with " + host + ":" + port);
-        }
-
-        // create a new connection
-        final RConnection connection = new RConnection(host, port);
-
-        // authenticate with the server if needed
-        if (connection.needLogin()) {
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Logging in as " + username);
-            }
-            connection.login(username, password);
-        }
-
-        // by this point we know the connection can be made, save it for the pool
-        final RSession session = connection.detach();
-        return sessions.add(session);
+        final RConnectionInfo connectionInfo =
+                new RConnectionInfo(host, port, username, password);
+        return connections.add(connectionInfo);
     }
 
     /**
@@ -320,36 +299,31 @@ public final class RConnectionPool {
     public int getNumberOfIdleConnections()  {
         final int numberOfIdleConnections;
         synchronized (syncObject) {
-            numberOfIdleConnections = numberOfConnections.get() - activeConnections.size();
+            numberOfIdleConnections = numberOfConnections.get() - activeConnectionMap.size();
         }
         return numberOfIdleConnections;
     }
 
     /**
-     * Shutdown this pool and all connections associated with it.
+     * Close this pool and any active connections associated with it.
      */
-    public void shutdown() {
+    public void close() {
         if (!closed.getAndSet(true)) {
-            LOG.debug("Shutting down the RConnectionPool");
+            LOG.debug("Closing down the RConnectionPool");
             synchronized (syncObject) {
-                final Iterator<RConnection> connectionIterator = activeConnections.iterator();
-                while (connectionIterator.hasNext()) {
-                    final RConnection connection = connectionIterator.next();
+                final Iterator<RConnection> activeConnectionIterator =
+                        activeConnectionMap.keySet().iterator();
+                while (activeConnectionIterator.hasNext()) {
+                    final RConnection connection = activeConnectionIterator.next();
                     connection.close();
-                    connectionIterator.remove();
+                    activeConnectionIterator.remove();
                     numberOfConnections.decrementAndGet();
                 }
 
-                final Iterator<RSession> sessionIterator = sessions.iterator();
-                while (sessionIterator.hasNext()) {
-                    final RSession session = sessionIterator.next();
-                    try {
-                        final RConnection connection = session.attach();
-                        connection.close();
-                    } catch (RserveException e) {             // NOPMD
-                        // silently ignore
-                    }
-                    sessionIterator.remove();
+                final Iterator<RConnectionInfo> idleConnectionIterator = connections.iterator();
+                while (idleConnectionIterator.hasNext()) {
+                    final RConnectionInfo connectionInfo = idleConnectionIterator.next();
+                    idleConnectionIterator.remove();
                     numberOfConnections.decrementAndGet();
                 }
             }
@@ -363,21 +337,29 @@ public final class RConnectionPool {
      * If all the connections managed by this pool are in use, this method will block until
      * a connection becomes available.
      * @return A valid connection object
+     * @throws RserveException if there is an issue connecting with an Rserver
      */
-    public RConnection borrowConnection() {
+    public RConnection borrowConnection() throws RserveException {
         RConnection connection = null;
         boolean gotConnection = false;
         while (!gotConnection) {
             assertOpen();
-            RSession session = null;
+            RConnectionInfo connectionInfo = null;
             try {
-                session = sessions.takeFirst();
-                connection = borrow(session);
+                connectionInfo = connections.takeFirst();
+                connection = borrow(connectionInfo);
                 gotConnection = true;
             } catch (RserveException e) {
-                // perhaps the server went down, remove it from the available list
-                LOG.error("Error with connection", e);
-                invalidateSession(session);
+                // perhaps the server went down?
+                LOG.error("Error with connection" + connectionInfo, e);
+                if (connectionInfo.numberOfFailedConnectionAttempts.incrementAndGet() > 3) {
+                    LOG.error("Three strikes - we're out!");
+                    invalidateConnection(connectionInfo);
+                } else {
+                    // put this connection at the end of the queue
+                    connections.addLast(connectionInfo);
+                    throw e;
+                }
             } catch (InterruptedException e) {
                 LOG.warn("Interrupted", e);
                 Thread.currentThread().interrupt();
@@ -390,13 +372,11 @@ public final class RConnectionPool {
     /**
      * Removes a session from the pool (presumably because there was an issue with the connection
      * to the Rserve process.  The pool will be closed if this action leaves no valid sessions.
-     * @param session The session to remove.
+     * @param connectionInfo The connection to remove.
      */
-    private void invalidateSession(final RSession session) {
-        synchronized (syncObject) {
-            if (sessions.remove(session) && numberOfConnections.decrementAndGet() <= 0) {
-                shutdown();
-            }
+    private void invalidateConnection(final RConnectionInfo connectionInfo) {
+        if (connections.remove(connectionInfo) && numberOfConnections.decrementAndGet() <= 0) {
+            close();
         }
     }
 
@@ -410,7 +390,8 @@ public final class RConnectionPool {
     public void invalidateConnection(final RConnection connection) {
         assertOpen();
 
-        if (!activeConnections.contains(connection)) {
+        final RConnectionInfo connectionInfo = activeConnectionMap.remove(connection);
+        if (connectionInfo == null) {
             throw new IllegalArgumentException("Connection is not managed by this pool");
         }
 
@@ -420,9 +401,8 @@ public final class RConnectionPool {
         }
 
         synchronized (syncObject) {
-            if (activeConnections.remove(connection)
-                    && numberOfConnections.decrementAndGet() <= 0) {
-                shutdown();
+            if (numberOfConnections.decrementAndGet() <= 0) {
+                close();
             }
         }
     }
@@ -436,27 +416,36 @@ public final class RConnectionPool {
      * @param unit a <tt>TimeUnit</tt> determining how to interpret the <tt>timeout</tt> parameter
      * @return A valid connection object or null if no connection was available withing the timeout
      * period
+     * @throws RserveException if there is an issue connecting with an Rserver
      */
-    public RConnection borrowConnection(final long timeout, final TimeUnit unit) {
+    public RConnection borrowConnection(final long timeout, final TimeUnit unit)
+            throws RserveException {
         RConnection connection = null;
         boolean gotConnection = false;
         boolean timedOut = false;
         while (!gotConnection && !timedOut) {
             assertOpen();
-            RSession session = null;
+            RConnectionInfo connectionInfo = null;
             try {
-                session = sessions.pollFirst(timeout, unit);
-                if (session == null) {
+                connectionInfo = connections.pollFirst(timeout, unit);
+                if (connectionInfo == null) {
                     LOG.debug("Timeout trying to get a connection");
                     timedOut = true;
                     continue;
                 }
-                connection = borrow(session);
+                connection = borrow(connectionInfo);
                 gotConnection = true;
             } catch (RserveException e) {
                 // perhaps the server went down, remove it from the available list
-                LOG.error("Error with connection", e);
-                invalidateSession(session);
+                LOG.error("Error with connection "+ connectionInfo, e);
+                if (connectionInfo.numberOfFailedConnectionAttempts.incrementAndGet() > 3) {
+                    LOG.error("Three strikes - we're out!");
+                    invalidateConnection(connectionInfo);
+                } else {
+                    // put this connection at the end of the queue
+                    connections.addLast(connectionInfo);
+                    throw e;
+                }
             } catch (InterruptedException e) {
                 LOG.warn("Interrupted", e);
                 Thread.currentThread().interrupt();
@@ -467,16 +456,32 @@ public final class RConnectionPool {
     }
 
     /**
-     * Get a connection from an existing session.
-     * @param session The session that holds the connection
+     * Get a connection from an existing configuration.
+     * @param connectionInfo The session that holds the connection
      * @return A valid connection
      * @throws RserveException if there was a problem getting the connection
      */
-    private RConnection borrow(final RSession session) throws RserveException {
-        final RConnection connection = session.attach();
-        synchronized (syncObject) {
-            activeConnections.add(connection);
+    private RConnection borrow(final RConnectionInfo connectionInfo) throws RserveException {
+        final String host = connectionInfo.getHost();
+        final int port = connectionInfo.getPort();
+
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Attempting connection with " + host + ":" + port);
         }
+
+        // create a new connection
+        final RConnection connection = new RConnection(host, port);
+        // authenticate with the server if needed
+        if (connection.needLogin()) {
+            final String username = connectionInfo.getUsername();
+            final String password = connectionInfo.getPassword();
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Logging in as " + username);
+            }
+            connection.login(username, password);
+        }
+
+        activeConnectionMap.put(connection, connectionInfo);
         return connection;
     }
 
@@ -485,7 +490,7 @@ public final class RConnectionPool {
      * @return The number of connections that have been borrowed but not returned.
      */
     public int getNumberOfActiveConnections() {
-        return activeConnections.size();
+        return activeConnectionMap.size();
     }
 
     /**
@@ -500,31 +505,21 @@ public final class RConnectionPool {
      * Return a connection to the pool. The connection <strong>must</strong> have been obtained
      * using this pool and not created externally.
      * @param connection The connection to return
-     * @throws RserveException if there is a problem with the connection
      */
-    public void returnConnection(final RConnection connection) throws RserveException {
+    public void returnConnection(final RConnection connection) {
         assertOpen();
 
-        if (!activeConnections.contains(connection)) {
+        final RConnectionInfo connectionInfo = activeConnectionMap.remove(connection);
+        if (connectionInfo == null) {
             throw new IllegalArgumentException("Connection is not managed by this pool");
         }
 
-        final RSession session;
-        try {
-            session = connection.detach();
-        } catch (RserveException e) {
-            // the connection is not in a good state, remove it from the pool
-            activeConnections.remove(connection);
-            if (numberOfConnections.decrementAndGet() <= 0) {
-                shutdown();
-            }
-            throw e;
+        // attempt to close the connection if we still can
+        if (connection.isConnected()) {
+            connection.close();
         }
 
-        synchronized (syncObject) {
-            activeConnections.remove(connection);
-            sessions.addFirst(session);
-        }
+        connections.addFirst(connectionInfo);
     }
 
     /**
@@ -596,6 +591,61 @@ public final class RConnectionPool {
                 pool = instance;
             }
             return pool;
+        }
+    }
+
+    private static final class RConnectionInfo extends RConfigurationItem {
+        /**
+         * Indicates that a connection with this configuration is active.
+         */
+        private transient boolean active;
+
+        /**
+         * A connection based on this configuration.
+         */
+        private transient RConnection rConnection;
+
+        /**
+         * Used to keep track of the number of failed connection attempts.
+         */
+        private transient AtomicInteger numberOfFailedConnectionAttempts = new AtomicInteger();
+
+        /**
+         * Create a new configuration item for an Rserve process.
+         * @param host The host/ip Rserve is running on
+         * @param port The TCP port Rserve is listening on
+         * @param username Username to supply for the connection
+         * @param password Password to supply for the connection
+         */
+        private RConnectionInfo(final String host,
+                                final int port,
+                                final String username,
+                                final String password) {
+            super(host, port, username, password);
+        }
+
+        /**
+         * Indicates that a connection with this configuration is active.
+         * @return true if a connection is active
+         */
+        public boolean isActive() {
+            return active;
+        }
+
+        /**
+         * Indicate that a connection with this configuration is active.
+         * @param state true if a connection is active
+         */
+        public void setActive(final boolean state) {
+            this.active = state;
+        }
+
+        public RConnection getRConnection() {
+            return rConnection;
+        }
+
+        public void setRConnection(final RConnection rConnection) {
+            this.rConnection = rConnection;
         }
     }
 }

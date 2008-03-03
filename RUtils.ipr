@@ -16,6 +16,8 @@
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionFactory.getConnection" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.foo" />
+      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.invalidateConnection" />
+      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.returnNullConnection" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.validateSingleton" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="Unnamed" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="edu.cornell.med.icb.R in RUtils" />
