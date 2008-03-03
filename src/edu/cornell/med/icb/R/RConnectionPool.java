@@ -209,14 +209,7 @@ public final class RConnectionPool {
             final String username = configuration.getString(server + "[@username]");
             final String password = configuration.getString(server + "[@password]");
 
-            final boolean added;
-            try {
-                added = addConnection(host, port, username, password);
-            } catch (RserveException e) {
-                LOG.error("Couldn't connect to " + host + ":" + port, e);
-                continue;
-            }
-
+            final boolean added = addConnection(host, port, username, password);
             if (added) {
                 numberOfConnections.getAndIncrement();
             } else {
@@ -249,12 +242,11 @@ public final class RConnectionPool {
      * @param username Username to send to the server if authentication is required
      * @param password Password to send to the server if authentication is required
      * @return true if the connection was added successfully, false otherwise
-     * @throws RserveException if there is a problem connecting to the server
      */
     private boolean addConnection(final String host,
                                   final int port,
                                   final String username,
-                                  final String password) throws RserveException {
+                                  final String password) {
         assertOpen();
 
         final RConnectionInfo connectionInfo =
