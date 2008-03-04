@@ -20,7 +20,6 @@ package edu.cornell.med.icb.R;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
-import org.apache.commons.configuration.reloading.FileChangedReloadingStrategy;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.rosuda.REngine.Rserve.RConnection;
@@ -90,7 +89,7 @@ public final class RConnectionPool {
     /**
      * Used to log debug and informational messages.
      */
-    private static final Log LOG = LogFactory.getLog(RConnectionPool.class);
+    private final Log log = LogFactory.getLog(RConnectionPool.class);
 
     /**
      * Indicates that that connection pool has been closed and not available for use.
@@ -120,6 +119,11 @@ public final class RConnectionPool {
      * Used to synchronize code blocks.
      */
     private final Object syncObject = new Object();
+
+    /**
+     * Configuration used to set up this pool.
+     */
+    private XMLConfiguration configuration;
 
     /**
      * Get the connection pool.
@@ -159,14 +163,14 @@ public final class RConnectionPool {
         super();
 
         final URL poolConfigURL = RConfigurationUtils.getConfigurationURL();
-        if (LOG.isInfoEnabled()) {
-            LOG.info("Configuring pool with: " + poolConfigURL);
+        if (log.isInfoEnabled()) {
+            log.info("Configuring pool with: " + poolConfigURL);
         }
 
         try {
             configure(poolConfigURL);
         } catch (ConfigurationException e) {
-            LOG.error("Cannot read configuration: " + poolConfigURL, e);
+            log.error("Cannot read configuration: " + poolConfigURL, e);
             closed.set(true);
         }
     }
@@ -178,7 +182,8 @@ public final class RConnectionPool {
      * @throws ConfigurationException if the configuration cannot be built from the url
      */
     private void configure(final URL configurationURL) throws ConfigurationException {
-        configure(new XMLConfiguration(configurationURL));
+        this.configuration = new XMLConfiguration(configurationURL);
+        configure(configuration);
     }
 
     /**
@@ -188,6 +193,7 @@ public final class RConnectionPool {
      */
     RConnectionPool(final XMLConfiguration configuration) {
         super();
+        this.configuration = configuration;
         configure(configuration);
     }
 
@@ -199,13 +205,15 @@ public final class RConnectionPool {
      */
     private boolean configure(final XMLConfiguration configuration) {
         configuration.setValidating(true);
-        configuration.setReloadingStrategy(new FileChangedReloadingStrategy());
         final int numberOfRServers = configuration.getMaxIndex("RServer") + 1;
+        if (log.isDebugEnabled()) {
+            log.debug("Found " + numberOfRServers + " Rserver configuration entries");
+        }
         for (int i = 0; i < numberOfRServers; i++) {
             final String server = "RServer(" + i + ")";
             final String host = configuration.getString(server + "[@host]");
-            final int port =
-                    configuration.getInt(server + "[@port]", RConfigurationUtils.DEFAULT_RSERVE_PORT);
+            final int port = configuration.getInt(server + "[@port]",
+                    RConfigurationUtils.DEFAULT_RSERVE_PORT);
             final String username = configuration.getString(server + "[@username]");
             final String password = configuration.getString(server + "[@password]");
 
@@ -213,12 +221,12 @@ public final class RConnectionPool {
             if (added) {
                 numberOfConnections.getAndIncrement();
             } else {
-                LOG.error("Unable to add connection to " + host + ":" + port);
+                log.error("Unable to add connection to " + host + ":" + port);
             }
         }
 
         if (numberOfConnections.get() == 0) {
-            LOG.error("No valid servers found!  Closing pool");
+            log.error("No valid servers found!  Closing pool");
             closed.set(true);
         } else {
             // add a shutdown hook so that the pool is terminated cleanly on JVM exit
@@ -226,13 +234,23 @@ public final class RConnectionPool {
                     new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {
                         @Override
                         public void run() {
-                            LOG.debug("Shutdown hook is closing the pool");
+                            log.debug("Shutdown hook is closing the pool");
                             close();
                         }
                     });
         }
 
         return !closed.get();
+    }
+
+    /**
+     * Try to reopen the pool.  This will force any existing connections to close
+     * and reevaluate the original configuration.
+     */
+    public void reopen() {
+        close();
+        closed.set(false);
+        configure(configuration);
     }
 
     /**
@@ -248,9 +266,11 @@ public final class RConnectionPool {
                                   final String username,
                                   final String password) {
         assertOpen();
-
         final RConnectionInfo connectionInfo =
                 new RConnectionInfo(host, port, username, password);
+        if (log.isDebugEnabled()) {
+            log.debug("Adding " + connectionInfo);
+        }
         return connections.add(connectionInfo);
     }
 
@@ -301,7 +321,7 @@ public final class RConnectionPool {
      */
     public void close() {
         if (!closed.getAndSet(true)) {
-            LOG.debug("Closing down the RConnectionPool");
+            log.debug("Closing down the RConnectionPool");
             synchronized (syncObject) {
                 final Iterator<RConnection> activeConnectionIterator =
                         activeConnectionMap.keySet().iterator();
@@ -312,11 +332,11 @@ public final class RConnectionPool {
                     numberOfConnections.decrementAndGet();
                 }
 
-                final Iterator<RConnectionInfo> idleConnectionIterator = connections.iterator();
-                while (idleConnectionIterator.hasNext()) {
-                    final RConnectionInfo connectionInfo = idleConnectionIterator.next();
-                    idleConnectionIterator.remove();
-                    numberOfConnections.decrementAndGet();
+                final int size = connections.size();
+                connections.clear();
+                final int newSize = numberOfConnections.addAndGet(-size);
+                if (newSize != 0) {
+                    log.warn("Number of connections after closing the pool is: " + newSize);
                 }
             }
         }
@@ -343,9 +363,9 @@ public final class RConnectionPool {
                 gotConnection = true;
             } catch (RserveException e) {
                 // perhaps the server went down?
-                LOG.error("Error with connection" + connectionInfo, e);
+                log.error("Error with connection" + connectionInfo, e);
                 if (connectionInfo.numberOfFailedConnectionAttempts.incrementAndGet() > 3) {
-                    LOG.error("Three strikes - we're out!");
+                    log.error("Three strikes - we're out!");
                     invalidateConnection(connectionInfo);
                 } else {
                     // put this connection at the end of the queue
@@ -353,7 +373,7 @@ public final class RConnectionPool {
                     throw e;
                 }
             } catch (InterruptedException e) {
-                LOG.warn("Interrupted", e);
+                log.warn("Interrupted", e);
                 Thread.currentThread().interrupt();
             }
         }
@@ -421,7 +441,7 @@ public final class RConnectionPool {
             try {
                 connectionInfo = connections.pollFirst(timeout, unit);
                 if (connectionInfo == null) {
-                    LOG.debug("Timeout trying to get a connection");
+                    log.debug("Timeout trying to get a connection");
                     timedOut = true;
                     continue;
                 }
@@ -429,9 +449,9 @@ public final class RConnectionPool {
                 gotConnection = true;
             } catch (RserveException e) {
                 // perhaps the server went down, remove it from the available list
-                LOG.error("Error with connection "+ connectionInfo, e);
+                log.error("Error with connection "+ connectionInfo, e);
                 if (connectionInfo.numberOfFailedConnectionAttempts.incrementAndGet() > 3) {
-                    LOG.error("Three strikes - we're out!");
+                    log.error("Three strikes - we're out!");
                     invalidateConnection(connectionInfo);
                 } else {
                     // put this connection at the end of the queue
@@ -439,7 +459,7 @@ public final class RConnectionPool {
                     throw e;
                 }
             } catch (InterruptedException e) {
-                LOG.warn("Interrupted", e);
+                log.warn("Interrupted", e);
                 Thread.currentThread().interrupt();
             }
         }
@@ -457,8 +477,8 @@ public final class RConnectionPool {
         final String host = connectionInfo.getHost();
         final int port = connectionInfo.getPort();
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Attempting connection with " + host + ":" + port);
+        if (log.isDebugEnabled()) {
+            log.debug("Attempting connection with " + host + ":" + port);
         }
 
         // create a new connection
@@ -467,8 +487,8 @@ public final class RConnectionPool {
         if (connection.needLogin()) {
             final String username = connectionInfo.getUsername();
             final String password = connectionInfo.getPassword();
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Logging in as " + username);
+            if (log.isDebugEnabled()) {
+                log.debug("Logging in as " + username);
             }
             connection.login(username, password);
         }

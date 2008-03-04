@@ -332,4 +332,35 @@ public class TestRConnectionPool {
             }
         }
     }
+
+    /**
+     * Validates that a pool can be reopened after it has been closed.
+     * @throws ConfigurationException if there is a problem setting up the default test connection
+     * @throws RserveException if there is a problem with the connection to the Rserve process
+     */
+    @Test
+    public void closeAndReopen() throws ConfigurationException, RserveException {
+        final XMLConfiguration configuration = new XMLConfiguration();
+        configuration.load(new StringReader(POOL_CONFIGURATION_XML));
+        pool = new RConnectionPool(configuration);
+
+        assertFalse("The pool should be open", pool.isClosed());
+        assertEquals("There should be one connection", 1, pool.getNumberOfConnections());
+        assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
+        assertEquals("The connections should be idle", 1, pool.getNumberOfIdleConnections());
+
+        pool.close();
+
+        assertEquals("There should be no connections", 0, pool.getNumberOfConnections());
+        assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
+        assertEquals("No connections should be idle", 0, pool.getNumberOfIdleConnections());
+        assertTrue("The pool should be closed", pool.isClosed());
+
+        pool.reopen();
+
+        assertFalse("The pool should be open", pool.isClosed());
+        assertEquals("There should be one connection", 1, pool.getNumberOfConnections());
+        assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
+        assertEquals("The connections should be idle", 1, pool.getNumberOfIdleConnections());
+    }
 }
