@@ -230,6 +230,13 @@ public final class RConnectionPool {
                     final String command = configuration.getString(server + "[@command]",
                             RUtils.DEFAULT_RSERVE_COMMAND);
                     RUtils.startup(getThreadPool(), command, host, port, username, password);
+                    // HACK ALERT!!!
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException ie) {
+                        log.warn("Interrupted", ie);
+                        Thread.currentThread().interrupt();
+                    }
                 }
                 final boolean added = addConnection(host, port, username, password, embedded);
                 if (added) {
@@ -415,10 +422,10 @@ public final class RConnectionPool {
                 if (connectionInfo.numberOfFailedConnectionAttempts.incrementAndGet() > 3) {
                     log.error("Three strikes - we're out!");
                     invalidateConnection(connectionInfo);
+                    throw e;
                 } else {
                     // put this connection at the end of the queue
                     connections.addLast(connectionInfo);
-                    throw e;
                 }
             } catch (InterruptedException e) {
                 log.warn("Interrupted", e);
