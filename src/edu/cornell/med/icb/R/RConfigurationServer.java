@@ -18,6 +18,7 @@
 
 package edu.cornell.med.icb.R;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -96,7 +97,8 @@ final class RConfigurationServer implements RConfiguration {
         final RConfiguration engine = new RConfigurationServer();
         final RConfiguration stub =
                 (RConfiguration) UnicastRemoteObject.exportObject(engine, 0);
-        final Registry registry = LocateRegistry.getRegistry(2001);
+        final Registry registry = LocateRegistry.getRegistry();
+        System.out.println(ArrayUtils.toString(registry.list()));
         registry.rebind(name, stub);
         System.out.println("RConfiguration bound");
     }

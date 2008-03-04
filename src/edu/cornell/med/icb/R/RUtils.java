@@ -35,7 +35,6 @@ import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.rosuda.REngine.Rserve.RConnection;
-import org.rosuda.REngine.Rserve.RSession;
 import org.rosuda.REngine.Rserve.RserveException;
 
 import java.io.BufferedReader;
@@ -51,6 +50,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * Class used to start and stop instances of the R server from within the JVM.
@@ -61,11 +61,6 @@ public final class RUtils {
      * Used to log debug and informational messages.
      */
     private static final Log LOG = LogFactory.getLog(RUtils.class);
-
-    /**
-     * An {@link java.util.concurrent.ExecutorService} that can be used to start new threads.
-     */
-    final ExecutorService threadPool = Executors.newCachedThreadPool();
 
     /**
      * Default executable name for reserve platforms.
@@ -81,7 +76,7 @@ public final class RUtils {
      * Default executable name for reserve.  The default assumes that the command is already
      * on the path.
      */
-    private static final String DEFAULT_RSERVE_COMMAND =
+    static final String DEFAULT_RSERVE_COMMAND =
             System.getProperty("RSERVE_COMMAND", SystemUtils.IS_OS_WINDOWS
                     ? DEFAULT_RSERVE_EXECUTABLE_WINDOWS : DEFAULT_RSERVE_EXECUTABLE);
 
@@ -103,21 +98,23 @@ public final class RUtils {
 
     /**
      * Can be used to start a rserve instance.
+     * @param threadPool The ExecutorService used to start the Rserve process
      * @param rServeCommand Full path to command used to start Rserve process
      * @param host Host where the command should be sent
      * @param port Port number where the command should be sent
      * @param username Username to send to the server if authentication is required
      * @param password Password to send to the server if authentication is required
+     * @return The return value from the Rserve instance
      */
-    void startup(final String rServeCommand,
+    static Future<Integer> startup(final ExecutorService threadPool, final String rServeCommand,
                  final String host, final int port,
                  final String username, final String password) {
         if (LOG.isInfoEnabled()) {
             LOG.info("Attempting to start Rserve on " + host + ":" + port);
         }
 
-        threadPool.submit(new Callable<Boolean>() {
-            public Boolean call() throws IOException {
+        return threadPool.submit(new Callable<Integer>() {
+            public Integer call() throws IOException {
                 final List<String> commands = new ArrayList<String>();
 
                 // if the host is not local, use ssh to exec the command
@@ -161,10 +158,13 @@ public final class RUtils {
                     IOUtils.closeQuietly(br);
                 }
 
-                return true;
+                final int exitValue = process.exitValue();
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("Rserve on " + host + ":" + port + " returned " + exitValue);
+                }
+                return exitValue;
             }
         });
-
     }
 
     /**
@@ -175,7 +175,7 @@ public final class RUtils {
      * @param password Password to send to the server if authentication is required
      * @throws RserveException if the process cannot be shutdown properly
      */
-    void shutdown(final String host, final int port,
+    static void shutdown(final String host, final int port,
                   final String username, final String password) throws RserveException {
         if (LOG.isInfoEnabled()) {
             LOG.info("Attempting to shutdown Rserve on " + host + ":" + port);
@@ -190,16 +190,6 @@ public final class RUtils {
         if (LOG.isInfoEnabled()) {
             LOG.info("Shutdown message sent");
         }
-    }
-
-    /**
-     * Can be used to shut down a running rserve instance.
-     * @param session the session associated with to the rserve process to shutdown
-     * @throws RserveException if the process cannot be shutdown properly
-     */
-    void shutdown(final RSession session) throws RserveException {
-        final RConnection connection = session.attach();
-        connection.shutdown();
     }
 
     /**
@@ -273,7 +263,7 @@ public final class RUtils {
             usage(options);
         } else {
             final boolean shutdown = commandLine.hasOption("shutdown");
-            final RUtils rUtils = new RUtils();
+            final ExecutorService threadPool = Executors.newCachedThreadPool();
 
             if (commandLine.hasOption("configuration")) {
                 final String configurationFile = commandLine.getOptionValue("configuration");
@@ -289,9 +279,9 @@ public final class RUtils {
                 }
 
                 configuration.setValidating(true);
-                final int numberOfRServers = configuration.getMaxIndex("RServer") + 1;
+                final int numberOfRServers = configuration.getMaxIndex("RConfiguration.RServer") + 1;
                 for (int i = 0; i < numberOfRServers; i++) {
-                    final String server = "RServer(" + i + ")";
+                    final String server = "RConfiguration.RServer(" + i + ")";
                     final String host = configuration.getString(server + "[@host]");
                     final int port = configuration.getInt(server + "[@port]",
                             RConfigurationUtils.DEFAULT_RSERVE_PORT);
@@ -302,9 +292,9 @@ public final class RUtils {
 
                     try {
                         if (shutdown) {
-                            rUtils.shutdown(host, port, username, password);
+                            shutdown(host, port, username, password);
                         } else {
-                            rUtils.startup(command, host, port, username, password);
+                            startup(threadPool, command, host, port, username, password);
                         }
                     } catch (RserveException e) {
                         // just let the user know and try the other servers
@@ -318,12 +308,12 @@ public final class RUtils {
                 final String password = commandLine.getOptionValue("password");
 
                 if (shutdown) {
-                    rUtils.shutdown(host, port, username, password);
+                    shutdown(host, port, username, password);
                 } else {
-                    rUtils.startup(DEFAULT_RSERVE_COMMAND, host, port, username, password);
+                    startup(threadPool, DEFAULT_RSERVE_COMMAND, host, port, username, password);
                 }
             }
-            rUtils.threadPool.shutdown();
+            threadPool.shutdown();
         }
     }
 

@@ -46,7 +46,7 @@ public class TestRConnectionPool {
      * A pool configuration with a single server on localhost.
       */
     private static final String POOL_CONFIGURATION_XML =
-            "<RConnectionPool><RServer host=\"localhost\"/></RConnectionPool>";
+            "<RConnectionPool><RConfiguration><RServer host=\"localhost\"/></RConfiguration></RConnectionPool>";
 
     /**
      * The connection pool under test.  We store it so that it can be shutdown properly.

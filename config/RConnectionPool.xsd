@@ -67,7 +67,7 @@
 			</xs:attribute>
 			<xs:attribute name="embedded" type="xs:boolean" default="false">
 				<xs:annotation>
-					<xs:documentation>If true, the connection pool will attempt to mange the rserve process.  (Only applies when host is "localhost/127.0.0.1") NOT YET IMPLEMENTED</xs:documentation>
+					<xs:documentation>If true, the connection pool will attempt to mange the rserve process.</xs:documentation>
 				</xs:annotation>
 			</xs:attribute>
 		</xs:complexType>

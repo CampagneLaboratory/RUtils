@@ -30,6 +30,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -126,6 +128,11 @@ public final class RConnectionPool {
     private XMLConfiguration configuration;
 
     /**
+     * An {@link java.util.concurrent.ExecutorService} that can be used to start new threads.
+     */
+    private ExecutorService threadPool;
+
+    /**
      * Get the connection pool.
      * @return The connection pool instance.
      */
@@ -146,7 +153,7 @@ public final class RConnectionPool {
     /**
      * Get the connection pool, suggesting a configuration
      * if the pool is not already created with a different configuration.
-     * @param configurationURL desired configurationn for the pool
+     * @param configurationURL desired configuration for the pool
      * @return The connection pool instance.
      * @throws ConfigurationException error configuring from the supplied URL
      */
@@ -204,40 +211,49 @@ public final class RConnectionPool {
      * @return true if the configuration has at least one valid server, false otherwise
      */
     private boolean configure(final XMLConfiguration configuration) {
-        configuration.setValidating(true);
-        final int numberOfRServers = configuration.getMaxIndex("RServer") + 1;
-        if (log.isDebugEnabled()) {
-            log.debug("Found " + numberOfRServers + " Rserver configuration entries");
-        }
-        for (int i = 0; i < numberOfRServers; i++) {
-            final String server = "RServer(" + i + ")";
-            final String host = configuration.getString(server + "[@host]");
-            final int port = configuration.getInt(server + "[@port]",
-                    RConfigurationUtils.DEFAULT_RSERVE_PORT);
-            final String username = configuration.getString(server + "[@username]");
-            final String password = configuration.getString(server + "[@password]");
-
-            final boolean added = addConnection(host, port, username, password);
-            if (added) {
-                numberOfConnections.getAndIncrement();
-            } else {
-                log.error("Unable to add connection to " + host + ":" + port);
+        synchronized (syncObject) {
+            configuration.setValidating(true);
+            final int numberOfRServers = configuration.getMaxIndex("RConfiguration.RServer") + 1;
+            if (log.isDebugEnabled()) {
+                log.debug("Found " + numberOfRServers + " Rserver configuration entries");
             }
-        }
+            for (int i = 0; i < numberOfRServers; i++) {
+                final String server = "RConfiguration.RServer(" + i + ")";
+                final String host = configuration.getString(server + "[@host]");
+                final int port = configuration.getInt(server + "[@port]",
+                        RConfigurationUtils.DEFAULT_RSERVE_PORT);
+                final String username = configuration.getString(server + "[@username]");
+                final String password = configuration.getString(server + "[@password]");
 
-        if (numberOfConnections.get() == 0) {
-            log.error("No valid servers found!  Closing pool");
-            closed.set(true);
-        } else {
-            // add a shutdown hook so that the pool is terminated cleanly on JVM exit
-            Runtime.getRuntime().addShutdownHook(
-                    new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {
-                        @Override
-                        public void run() {
-                            log.debug("Shutdown hook is closing the pool");
-                            close();
-                        }
-                    });
+                final boolean embedded = configuration.getBoolean(server + "[@embedded]", false);
+                if (embedded) {
+                    final String command = configuration.getString(server + "[@command]",
+                            RUtils.DEFAULT_RSERVE_COMMAND);
+                    RUtils.startup(getThreadPool(), command, host, port, username, password);
+                }
+                final boolean added = addConnection(host, port, username, password, embedded);
+                if (added) {
+                    numberOfConnections.getAndIncrement();
+                } else {
+                    log.error("Unable to add connection to " + host + ":" + port);
+                }
+            }
+
+            if (numberOfConnections.get() == 0) {
+                log.error("No valid servers found!  Closing pool");
+                closed.set(true);
+            } else {
+                // add a shutdown hook so that the pool is terminated cleanly on JVM exit
+                // TODO - remove the previous shutdown thread if any
+                Runtime.getRuntime().addShutdownHook(
+                        new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {
+                            @Override
+                            public void run() {
+                                log.debug("Shutdown hook is closing the pool");
+                                close();
+                            }
+                        });
+            }
         }
 
         return !closed.get();
@@ -253,6 +269,15 @@ public final class RConnectionPool {
         configure(configuration);
     }
 
+    private ExecutorService getThreadPool() {
+        synchronized (syncObject) {
+            if (threadPool == null || threadPool.isShutdown()) {
+                threadPool = Executors.newCachedThreadPool();
+            }
+            return threadPool;
+        }
+    }
+
     /**
      * Adds a connection to the pool of available connections.
      * @param host Host where the command should be sent
@@ -264,10 +289,11 @@ public final class RConnectionPool {
     private boolean addConnection(final String host,
                                   final int port,
                                   final String username,
-                                  final String password) {
+                                  final String password,
+                                  final boolean embedded) {
         assertOpen();
         final RConnectionInfo connectionInfo =
-                new RConnectionInfo(host, port, username, password);
+                new RConnectionInfo(host, port, username, password, embedded);
         if (log.isDebugEnabled()) {
             log.debug("Adding " + connectionInfo);
         }
@@ -323,25 +349,47 @@ public final class RConnectionPool {
         if (!closed.getAndSet(true)) {
             log.debug("Closing down the RConnectionPool");
             synchronized (syncObject) {
-                final Iterator<RConnection> activeConnectionIterator =
-                        activeConnectionMap.keySet().iterator();
-                while (activeConnectionIterator.hasNext()) {
-                    final RConnection connection = activeConnectionIterator.next();
+                final Iterator<Map.Entry<RConnection, RConnectionInfo>> entries =
+                        activeConnectionMap.entrySet().iterator();
+                while (entries.hasNext()) {
+                    final Map.Entry<RConnection, RConnectionInfo> entry = entries.next();
+                    final RConnection connection = entry.getKey();
                     connection.close();
-                    activeConnectionIterator.remove();
+                    final RConnectionInfo connectionInfo = entry.getValue();
+                    if (connectionInfo.embedded) {
+                        try {
+                            RUtils.shutdown(connectionInfo.getHost(), connectionInfo.getPort(),
+                                    connectionInfo.getUsername(), connectionInfo.getPassword());
+                        } catch (RserveException e) {
+                            log.warn("Problem shutting down Rserver on "
+                                    + connectionInfo.getHost() + ":" + connectionInfo.getPort(), e);
+                        }
+                    }
+                    entries.remove();
                     numberOfConnections.decrementAndGet();
                 }
 
-                final int size = connections.size();
-                connections.clear();
-                final int newSize = numberOfConnections.addAndGet(-size);
-                if (newSize != 0) {
-                    log.warn("Number of connections after closing the pool is: " + newSize);
+                final Iterator<RConnectionInfo> connectionInfoIterator = connections.iterator();
+                while (connectionInfoIterator.hasNext()) {
+                    final RConnectionInfo connectionInfo = connectionInfoIterator.next();
+                    if (connectionInfo.embedded) {
+                        try {
+                            RUtils.shutdown(connectionInfo.getHost(), connectionInfo.getPort(),
+                                    connectionInfo.getUsername(), connectionInfo.getPassword());
+                        } catch (RserveException e) {
+                            log.warn("Problem shutting down Rserver on "
+                                    + connectionInfo.getHost() + ":" + connectionInfo.getPort(), e);
+                        }
+                    }
+                    connectionInfoIterator.remove();
+                    numberOfConnections.decrementAndGet();
+                }
+
+                if (!connections.isEmpty()) {
+                    log.warn("Number of connections after closing is: " + connections.size());
                 }
             }
         }
-
-        // TODO: terminate embedded servers
     }
 
     /**
@@ -363,7 +411,7 @@ public final class RConnectionPool {
                 gotConnection = true;
             } catch (RserveException e) {
                 // perhaps the server went down?
-                log.error("Error with connection" + connectionInfo, e);
+                log.error("Error with connection " + connectionInfo, e);
                 if (connectionInfo.numberOfFailedConnectionAttempts.incrementAndGet() > 3) {
                     log.error("Three strikes - we're out!");
                     invalidateConnection(connectionInfo);
@@ -449,7 +497,7 @@ public final class RConnectionPool {
                 gotConnection = true;
             } catch (RserveException e) {
                 // perhaps the server went down, remove it from the available list
-                log.error("Error with connection "+ connectionInfo, e);
+                log.error("Error with connection " + connectionInfo, e);
                 if (connectionInfo.numberOfFailedConnectionAttempts.incrementAndGet() > 3) {
                     log.error("Three strikes - we're out!");
                     invalidateConnection(connectionInfo);
@@ -608,19 +656,15 @@ public final class RConnectionPool {
 
     private static final class RConnectionInfo extends RConfigurationItem {
         /**
-         * Indicates that a connection with this configuration is active.
+         * Indicates that the pool started this connection.
          */
-        private transient boolean active;
-
-        /**
-         * A connection based on this configuration.
-         */
-        private transient RConnection rConnection;
+        private final transient boolean embedded;
 
         /**
          * Used to keep track of the number of failed connection attempts.
          */
-        private transient AtomicInteger numberOfFailedConnectionAttempts = new AtomicInteger();
+        private final transient AtomicInteger numberOfFailedConnectionAttempts =
+                new AtomicInteger();
 
         /**
          * Create a new configuration item for an Rserve process.
@@ -632,32 +676,10 @@ public final class RConnectionPool {
         private RConnectionInfo(final String host,
                                 final int port,
                                 final String username,
-                                final String password) {
+                                final String password,
+                                final boolean embedded) {
             super(host, port, username, password);
-        }
-
-        /**
-         * Indicates that a connection with this configuration is active.
-         * @return true if a connection is active
-         */
-        public boolean isActive() {
-            return active;
-        }
-
-        /**
-         * Indicate that a connection with this configuration is active.
-         * @param state true if a connection is active
-         */
-        public void setActive(final boolean state) {
-            this.active = state;
-        }
-
-        public RConnection getRConnection() {
-            return rConnection;
-        }
-
-        public void setRConnection(final RConnection rConnection) {
-            this.rConnection = rConnection;
+            this.embedded = embedded;
         }
     }
 }
