@@ -133,6 +133,18 @@ public final class RConnectionPool {
     private ExecutorService threadPool;
 
     /**
+     * Thread used to shut down connections cleanly.
+     */
+    private final Thread shutdownHook =
+            new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {
+                @Override
+                public void run() {
+                    log.debug("Shutdown hook is closing the pool");
+                    close();
+                }
+    };
+
+    /**
      * Get the connection pool.
      * @return The connection pool instance.
      */
@@ -251,15 +263,8 @@ public final class RConnectionPool {
                 closed.set(true);
             } else {
                 // add a shutdown hook so that the pool is terminated cleanly on JVM exit
-                // TODO - remove the previous shutdown thread if any
-                Runtime.getRuntime().addShutdownHook(
-                        new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {
-                            @Override
-                            public void run() {
-                                log.debug("Shutdown hook is closing the pool");
-                                close();
-                            }
-                        });
+                log.debug("adding shutdown hook");
+                Runtime.getRuntime().addShutdownHook(shutdownHook);
             }
         }
 
@@ -292,6 +297,7 @@ public final class RConnectionPool {
      * @param username Username to send to the server if authentication is required
      * @param password Password to send to the server if authentication is required
      * @return true if the connection was added successfully, false otherwise
+     * @param embedded indicates that the pool started this connection if set to true
      */
     private boolean addConnection(final String host,
                                   final int port,
@@ -396,6 +402,10 @@ public final class RConnectionPool {
                     log.warn("Number of connections after closing is: " + connections.size());
                 }
             }
+
+            // remove the shutdown hook
+            log.debug("removing shutdown hook");
+            Runtime.getRuntime().removeShutdownHook(shutdownHook);
         }
     }
 
@@ -679,6 +689,7 @@ public final class RConnectionPool {
          * @param port The TCP port Rserve is listening on
          * @param username Username to supply for the connection
          * @param password Password to supply for the connection
+         * @param embedded indicates that the pool started this connection if set to true
          */
         private RConnectionInfo(final String host,
                                 final int port,
