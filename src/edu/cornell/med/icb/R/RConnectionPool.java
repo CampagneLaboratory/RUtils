@@ -402,10 +402,6 @@ public final class RConnectionPool {
                     log.warn("Number of connections after closing is: " + connections.size());
                 }
             }
-
-            // remove the shutdown hook
-            log.debug("removing shutdown hook");
-            Runtime.getRuntime().removeShutdownHook(shutdownHook);
         }
     }
 

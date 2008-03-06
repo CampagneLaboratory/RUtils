@@ -357,6 +357,7 @@ public final class RUtils {
         xml.append("<?xml version='1.0' encoding='UTF-8'?>");
         xml.append("<RConnectionPool xsi:noNamespaceSchemaLocation='RConnectionPool.xsd'");
         xml.append(" xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>");
+        xml.append("<RConfiguration publish='false'>");
         xml.append("<RServer ");
         xml.append("host='").append(hostname).append("' ");
         xml.append("port='").append(port).append("' ");
@@ -367,6 +368,7 @@ public final class RUtils {
             xml.append("password='").append(password).append("' ");
         }
         xml.append("/>");
+        xml.append("</RConfiguration>");
         xml.append("</RConnectionPool>");
 
         final XMLConfiguration configuration = new XMLConfiguration();
