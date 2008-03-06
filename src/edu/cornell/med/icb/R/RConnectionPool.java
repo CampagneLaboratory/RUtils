@@ -91,7 +91,7 @@ public final class RConnectionPool {
     /**
      * Used to log debug and informational messages.
      */
-    private final Log log = LogFactory.getLog(RConnectionPool.class);
+    private final Log log = LogFactory.getLog(RConnectionPool.class); // NOPMD - singleton class
 
     /**
      * Indicates that that connection pool has been closed and not available for use.
@@ -131,18 +131,6 @@ public final class RConnectionPool {
      * An {@link java.util.concurrent.ExecutorService} that can be used to start new threads.
      */
     private ExecutorService threadPool;
-
-    /**
-     * Thread used to shut down connections cleanly.
-     */
-    private final Thread shutdownHook =
-            new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {
-                @Override
-                public void run() {
-                    log.debug("Shutdown hook is closing the pool");
-                    close();
-                }
-    };
 
     /**
      * Get the connection pool.
@@ -192,6 +180,8 @@ public final class RConnectionPool {
             log.error("Cannot read configuration: " + poolConfigURL, e);
             closed.set(true);
         }
+
+        addShutdownHook();
     }
 
     /**
@@ -214,6 +204,7 @@ public final class RConnectionPool {
         super();
         this.configuration = configuration;
         configure(configuration);
+        addShutdownHook();
     }
 
     /**
@@ -261,10 +252,6 @@ public final class RConnectionPool {
             if (numberOfConnections.get() == 0) {
                 log.error("No valid servers found!  Closing pool");
                 closed.set(true);
-            } else {
-                // add a shutdown hook so that the pool is terminated cleanly on JVM exit
-                log.debug("adding shutdown hook");
-                Runtime.getRuntime().addShutdownHook(shutdownHook);
             }
         }
 
@@ -341,6 +328,7 @@ public final class RConnectionPool {
     RConnectionPool(final URL configurationURL) throws ConfigurationException {
         super();
         configure(configurationURL);
+        addShutdownHook();
     }
 
     /**
@@ -593,6 +581,22 @@ public final class RConnectionPool {
         }
 
         connections.addFirst(connectionInfo);
+    }
+
+
+    /**
+     * Add a shutdown hook so that the pool is terminated cleanly on JVM exit.
+     */
+    private void addShutdownHook() {
+        log.debug("adding shutdown hook");
+        Runtime.getRuntime().addShutdownHook(
+               new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {  // NOPMD
+                   @Override
+                   public void run() {
+                       log.debug("Shutdown hook is closing the pool");
+                       close();
+                   }
+               });
     }
 
     /**
