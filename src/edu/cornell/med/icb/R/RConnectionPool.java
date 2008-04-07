@@ -527,7 +527,7 @@ public final class RConnectionPool {
         final int port = connectionInfo.getPort();
 
         if (log.isDebugEnabled()) {
-            log.debug("Attempting connection with " + host + ":" + port);
+            log.debug("Establishing connection with " + host + ":" + port);
         }
 
         // create a new connection
@@ -543,6 +543,9 @@ public final class RConnectionPool {
         }
 
         activeConnectionMap.put(connection, connectionInfo);
+        if (log.isDebugEnabled()) {
+            log.debug("Number of active connections = " + activeConnectionMap.size());
+        }
         return connection;
     }
 
@@ -573,6 +576,12 @@ public final class RConnectionPool {
         final RConnectionInfo connectionInfo = activeConnectionMap.remove(connection);
         if (connectionInfo == null) {
             throw new IllegalArgumentException("Connection is not managed by this pool");
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Terminating connection with " + connectionInfo.getHost()
+                    + ":" + connectionInfo.getPort());
+             log.debug("Number of active connections = " + activeConnectionMap.size());
         }
 
         // attempt to close the connection if we still can
