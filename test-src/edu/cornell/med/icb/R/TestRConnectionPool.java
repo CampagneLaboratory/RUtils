@@ -116,10 +116,6 @@ public class TestRConnectionPool {
         assertEquals("No connection should be active", 0, pool.getNumberOfActiveConnections());
         assertEquals("The connection should be idle", 1, pool.getNumberOfIdleConnections());
 
-        // and the original connection should no longer be connected
-        assertFalse("The connection should not be connected to the server anymore",
-                connection.isConnected());
-
         // make sure we can get another good connection after returning the previous one
         final RConnection connection3 = pool.borrowConnection(100, TimeUnit.MILLISECONDS);
         assertNotNull("Connection should not be null", connection3);
@@ -157,6 +153,7 @@ public class TestRConnectionPool {
      * @throws ConfigurationException if there is a problem setting up the default test connection
      * @throws RserveException if there is a problem with the connection to the Rserve process
      */
+    @Test
     public void returnClosedConnection() throws ConfigurationException, RserveException {
         final XMLConfiguration configuration = new XMLConfiguration();
         configuration.load(new StringReader(POOL_CONFIGURATION_XML));
@@ -184,6 +181,15 @@ public class TestRConnectionPool {
         // and the connection should remain closed
         assertFalse("The connection should not be connected to the server anymore",
                 connection.isConnected());
+
+        assertEquals("There should be one connection", 1, pool.getNumberOfConnections());
+        assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
+        assertEquals("The connection should be idle", 1, pool.getNumberOfIdleConnections());
+
+        // get another connection from the pool
+        final RConnection connection2 = pool.borrowConnection();
+        assertNotNull("Connection should not be null", connection2);
+        assertTrue("The connection should be connected to the server", connection2.isConnected());
     }
 
     /**

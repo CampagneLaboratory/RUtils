@@ -373,6 +373,11 @@ public final class RConnectionPool {
                 final Iterator<RConnectionInfo> connectionInfoIterator = connections.iterator();
                 while (connectionInfoIterator.hasNext()) {
                     final RConnectionInfo connectionInfo = connectionInfoIterator.next();
+                    final RConnection connection = connectionInfo.connection;
+                    if (connection != null && connection.isConnected()) {
+                        connection.close();
+                    }
+
                     if (connectionInfo.embedded) {
                         try {
                             RUtils.shutdown(connectionInfo.getHost(), connectionInfo.getPort(),
@@ -407,6 +412,9 @@ public final class RConnectionPool {
             assertOpen();
             RConnectionInfo connectionInfo = null;
             try {
+                if (log.isDebugEnabled()) {
+                    log.debug("Borrow connection - number idle = " + getNumberOfIdleConnections());
+                }
                 connectionInfo = connections.takeFirst();
                 connection = borrow(connectionInfo);
                 gotConnection = true;
@@ -488,6 +496,9 @@ public final class RConnectionPool {
             assertOpen();
             RConnectionInfo connectionInfo = null;
             try {
+                if (log.isDebugEnabled()) {
+                    log.debug("Borrow connection - number idle = " + getNumberOfIdleConnections());
+                }
                 connectionInfo = connections.pollFirst(timeout, unit);
                 if (connectionInfo == null) {
                     log.debug("Timeout trying to get a connection");
@@ -527,19 +538,26 @@ public final class RConnectionPool {
         final int port = connectionInfo.getPort();
 
         if (log.isDebugEnabled()) {
-            log.debug("Establishing connection with " + host + ":" + port);
+            log.debug("Thread " + Thread.currentThread().getName()
+                    + " Establishing connection with " + host + ":" + port);
         }
 
-        // create a new connection
-        final RConnection connection = new RConnection(host, port);
-        // authenticate with the server if needed
-        if (connection.needLogin()) {
-            final String username = connectionInfo.getUsername();
-            final String password = connectionInfo.getPassword();
-            if (log.isDebugEnabled()) {
-                log.debug("Logging in as " + username);
+        final RConnection connection;
+        if (connectionInfo.connection == null || !connectionInfo.connection.isConnected()) {
+            // create a new connection
+            connection = new RConnection(host, port);
+            // authenticate with the server if needed
+            if (connection.needLogin()) {
+                final String username = connectionInfo.getUsername();
+                final String password = connectionInfo.getPassword();
+                if (log.isDebugEnabled()) {
+                    log.debug("Logging in as " + username);
+                }
+                connection.login(username, password);
             }
-            connection.login(username, password);
+            connectionInfo.connection = connection;
+        } else {
+            connection = connectionInfo.connection;
         }
 
         activeConnectionMap.put(connection, connectionInfo);
@@ -567,7 +585,9 @@ public final class RConnectionPool {
 
     /**
      * Return a connection to the pool. The connection <strong>must</strong> have been obtained
-     * using this pool and not created externally.
+     * using this pool and not created externally.  The pool will not close the connection upon
+     * a return, so it is the responsibility of the client to do so.  Connections will be
+     * reused when they have not been closed externally.
      * @param connection The connection to return
      */
     public void returnConnection(final RConnection connection) {
@@ -579,19 +599,14 @@ public final class RConnectionPool {
         }
 
         if (log.isDebugEnabled()) {
-            log.debug("Terminating connection with " + connectionInfo.getHost()
+            log.debug("Thread " + Thread.currentThread().getName()
+                    + "Returning connection with " + connectionInfo.getHost()
                     + ":" + connectionInfo.getPort());
              log.debug("Number of active connections = " + activeConnectionMap.size());
         }
 
-        // attempt to close the connection if we still can
-        if (connection.isConnected()) {
-            connection.close();
-        }
-
         connections.addFirst(connectionInfo);
     }
-
 
     /**
      * Add a shutdown hook so that the pool is terminated cleanly on JVM exit.
@@ -685,6 +700,11 @@ public final class RConnectionPool {
          * Indicates that the pool started this connection.
          */
         private final transient boolean embedded;
+
+        /**
+         * The connection, if any, associated with this configuration.
+         */
+        private transient RConnection connection;
 
         /**
          * Used to keep track of the number of failed connection attempts.

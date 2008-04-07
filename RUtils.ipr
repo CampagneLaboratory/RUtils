@@ -16,12 +16,14 @@
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="startup" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="All in RUtils" />
+      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConfigurationItem" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionFactory.getConnection" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.closeAndReopen" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.foo" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.invalidateConnection" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.reconfigure" />
+      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.returnClosedConnection" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.returnNullConnection" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.validConnection" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.validateSingleton" />
@@ -735,7 +737,7 @@
     </configuration>
     <configuration default="false" name="RConfigurationServer" type="Application" factoryName="Application" enabled="false" merge="false">
       <option name="MAIN_CLASS_NAME" value="edu.cornell.med.icb.R.RConfigurationServer" />
-      <option name="VM_PARAMETERS" value="-Djava.security.policy=&quot;file:/$PROJECT_DIR$/../../../../../Documents%20and%20Settings/Marko/My%20Documents/IdeaProjects/RUtils/config/server.policy&quot; -Djava.rmi.server.codebase=&quot;file:/$PROJECT_DIR$/../../../../../Documents%20and%20Settings/Marko/My%20Documents/IdeaProjects/RUtils/classes&quot;" />
+      <option name="VM_PARAMETERS" value="-Djava.security.policy=&quot;file:/C:/Documents%20and%20Settings/Marko/My%20Documents/IdeaProjects/RUtils/config/server.policy&quot; -Djava.rmi.server.codebase=&quot;file:/C:/Documents%20and%20Settings/Marko/My%20Documents/IdeaProjects/RUtils/classes&quot;" />
       <option name="PROGRAM_PARAMETERS" value="" />
       <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
@@ -822,7 +824,9 @@
         <option name="JVMPI" value="false" />
         <option name="INTERPRETED" value="false" />
       </RunnerSettings>
+      <RunnerSettings RunnerId="Run" />
       <ConfigurationWrapper RunnerId="Debug" />
+      <ConfigurationWrapper RunnerId="Run" />
       <method>
         <option name="Run Ant target" value="true" />
         <option name="Make" value="false" />
@@ -862,6 +866,27 @@
     <option name="myTilesValidationEnabled" value="true" />
     <option name="myValidatorValidationEnabled" value="true" />
     <option name="myReportErrorsAsWarnings" value="true" />
+  </component>
+  <component name="SvnBranchConfigurationManager">
+    <option name="myConfigurationMap">
+      <map>
+        <entry key="$PROJECT_DIR$">
+          <value>
+            <SvnBranchConfiguration>
+              <option name="branchUrls">
+                <list>
+                  <option value="https://pbtech-vc.med.cornell.edu/public/svn/icb/branches" />
+                  <option value="https://pbtech-vc.med.cornell.edu/public/svn/icb/scripts" />
+                  <option value="https://pbtech-vc.med.cornell.edu/public/svn/icb/tags" />
+                  <option value="https://pbtech-vc.med.cornell.edu/public/svn/icb/testsupport" />
+                </list>
+              </option>
+              <option name="trunkUrl" value="https://pbtech-vc.med.cornell.edu/public/svn/icb/trunk" />
+            </SvnBranchConfiguration>
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="SvnChangesBrowserSettings">
     <option name="USE_AUTHOR_FIELD" value="true" />
