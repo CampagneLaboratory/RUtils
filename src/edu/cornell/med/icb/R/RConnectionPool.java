@@ -228,10 +228,10 @@ public final class RConnectionPool {
                 final String username = configuration.getString(server + "[@username]");
                 final String password = configuration.getString(server + "[@password]");
 
+                final String command = configuration.getString(server + "[@command]",
+                        RUtils.DEFAULT_RSERVE_COMMAND);
                 final boolean embedded = configuration.getBoolean(server + "[@embedded]", false);
                 if (embedded) {
-                    final String command = configuration.getString(server + "[@command]",
-                            RUtils.DEFAULT_RSERVE_COMMAND);
                     RUtils.startup(getThreadPool(), command, host, port, username, password);
                     // HACK ALERT!!!
                     try {
@@ -241,7 +241,8 @@ public final class RConnectionPool {
                         Thread.currentThread().interrupt();
                     }
                 }
-                final boolean added = addConnection(host, port, username, password, embedded);
+                final boolean added =
+                        addConnection(host, port, username, password, embedded, command);
                 if (added) {
                     numberOfConnections.getAndIncrement();
                 } else {
@@ -290,10 +291,11 @@ public final class RConnectionPool {
                                   final int port,
                                   final String username,
                                   final String password,
-                                  final boolean embedded) {
+                                  final boolean embedded,
+                                  final String command) {
         assertOpen();
         final RConnectionInfo connectionInfo =
-                new RConnectionInfo(host, port, username, password, embedded);
+                new RConnectionInfo(host, port, username, password, embedded, command);
         if (log.isDebugEnabled()) {
             log.debug("Adding " + connectionInfo);
         }
@@ -608,6 +610,46 @@ public final class RConnectionPool {
         connections.addFirst(connectionInfo);
     }
 
+    public RConnection reEstablishConnection(final RConnection connection) throws RserveException {
+        final RConnectionInfo connectionInfo = activeConnectionMap.remove(connection);
+        if (connectionInfo == null) {
+            throw new IllegalArgumentException("Connection is not managed by this pool");
+        }
+
+        final String host = connectionInfo.getHost();
+        final int port = connectionInfo.getPort();
+        final String username = connectionInfo.getUsername();
+        final String password = connectionInfo.getPassword();
+        if (log.isDebugEnabled()) {
+            log.debug("Reestablishing connection with " + connectionInfo.toString());
+        }
+
+        if (connection.isConnected()) {
+            connection.close();
+        }
+
+        if (connectionInfo.embedded) {
+            // HACK ALERT!!!
+            try {
+                try {
+                    RUtils.shutdown(host, port, username, password);
+                    Thread.sleep(5000);
+                } catch (RserveException e) {
+                    log.warn("Problem shutting down server on " + host + ":" + port, e);
+                }
+
+                RUtils.startup(getThreadPool(),
+                        connectionInfo.command, host, port, username, password);
+                Thread.sleep(5000);
+            } catch (InterruptedException ie) {
+                log.warn("Interrupted", ie);
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        return borrow(connectionInfo);
+    }
+
     /**
      * Add a shutdown hook so that the pool is terminated cleanly on JVM exit.
      */
@@ -702,6 +744,11 @@ public final class RConnectionPool {
         private final transient boolean embedded;
 
         /**
+         * Command used to start the server.
+         */
+        private final transient String command;
+
+        /**
          * The connection, if any, associated with this configuration.
          */
         private transient RConnection connection;
@@ -719,14 +766,17 @@ public final class RConnectionPool {
          * @param username Username to supply for the connection
          * @param password Password to supply for the connection
          * @param embedded indicates that the pool started this connection if set to true
+         * @param command Command used to start the server.
          */
         private RConnectionInfo(final String host,
                                 final int port,
                                 final String username,
                                 final String password,
-                                final boolean embedded) {
+                                final boolean embedded,
+                                final String command) {
             super(host, port, username, password);
             this.embedded = embedded;
+            this.command = command;
         }
     }
 }
