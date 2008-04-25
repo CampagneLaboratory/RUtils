@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -272,7 +273,7 @@ public final class RConnectionPool {
     private ExecutorService getThreadPool() {
         synchronized (syncObject) {
             if (threadPool == null || threadPool.isShutdown()) {
-                threadPool = Executors.newCachedThreadPool();
+                threadPool = Executors.newCachedThreadPool(new DaemonThreadFactory());
             }
             return threadPool;
         }
@@ -659,7 +660,7 @@ public final class RConnectionPool {
                new Thread(RConnectionPool.class.getSimpleName() + "-ShutdownHook") {  // NOPMD
                    @Override
                    public void run() {
-                       log.debug("Shutdown hook is closing the pool");
+                       log.info("Shutdown hook is closing the pool");
                        close();
                    }
                });
@@ -777,6 +778,36 @@ public final class RConnectionPool {
             super(host, port, username, password);
             this.embedded = embedded;
             this.command = command;
+        }
+    }
+
+    /**
+     * The default thread factory to use for embedded Rserve instances.  Unlike the
+     * {@link Executors#defaultThreadFactory()}, each new thread is created as a daemon
+     * thread which will not prevent the JVM from shutting down when the main task is
+     * complete.
+     */
+    private static class DaemonThreadFactory implements ThreadFactory {
+        static final AtomicInteger poolNumber = new AtomicInteger(1);
+        final ThreadGroup group;
+        final AtomicInteger threadNumber = new AtomicInteger(1);
+        final String namePrefix;
+
+        DaemonThreadFactory() {
+            super();
+            final SecurityManager s = System.getSecurityManager();
+            group = s != null ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+            namePrefix = "pool-" + poolNumber.getAndIncrement() + "-thread-";
+        }
+
+        public Thread newThread(final Runnable runnable) {
+            final Thread thread = new Thread(group, runnable,
+                    namePrefix + threadNumber.getAndIncrement(), 0);
+            thread.setDaemon(true);
+            if (thread.getPriority() != Thread.NORM_PRIORITY) {
+                thread.setPriority(Thread.NORM_PRIORITY);
+            }
+            return thread;
         }
     }
 }
