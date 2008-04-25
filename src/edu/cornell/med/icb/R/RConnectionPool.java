@@ -54,19 +54,24 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <li>port - The TCP port Rserve is listening on (default = 6311)
  * <li>username - Username to supply for the connection
  * <li>password - Password to supply for the connection
+ * <li>command - Full command used to start a Rserve process
+ * <li>embedded - If true, the connection pool will attempt to manage the rserve processes
+ * by starting the servers on pool initialization and terminating the servers on JVM shutdown
  * </ul>
  * The following configuration would make three servers available to the pool.
  * <p><em><blockquote><pre>
  * &lt;!-- Configuration file for the connection pool to Rserve processes --&gt;
  * &lt;RConnectionPool&gt;
- *    &lt;!-- default Rserve process running on localhost --&gt;
- *    &lt;RServer host="localhost"/&gt;
+ *    &lt;RConfiguration&gt;
+ *       &lt;!-- default Rserve process running on localhost --&gt;
+ *       &lt;RServer host="localhost"/&gt;
  *
- *    &lt;!-- Rserve process on localhost port 6312 --&gt;
- *    &lt;RServer host="127.0.0.1" port="6312"/&gt;
+ *       &lt;!-- Rserve process on localhost port 6312 --&gt;
+ *       &lt;RServer host="127.0.0.1" port="6312"/&gt;
  *
- *    &lt;!-- Rserve process on foobar.med.cornell.edu port 1234 with authentication --&gt;
- *    &lt;RServer host="foobar.med.cornell.edu" port="1234" username="me" password="mypassword"/&gt;
+ *       &lt;!-- Rserve process on foobar.med.cornell.edu port 1234 with authentication --&gt;
+ *       &lt;RServer host="foobar.med.cornell.edu" port="1234" username="me" password="mypassword"/&gt;
+ *    &lt;RConfiguration&gt;
  * &lt;/RConnectionPool&gt;
  * </pre></blockquote></em>
  *
@@ -611,6 +616,23 @@ public final class RConnectionPool {
         connections.addFirst(connectionInfo);
     }
 
+    /**
+     * Attempts to reestablish a connection with a Rserve instance by essentially
+     * closing the current connection and opening a new one.  Furthermore, if the
+     * Rserve process is tagged as being embedded, the Rserve process will be shutdown
+     * and restarted.
+     *
+     * Typical use of this method would happen if the client suspects the server has
+     * gotten into an invalid state somehow.
+     *
+     * @param connection The connection to reestablish (note that this object will
+     * no longer be valid after this call is made.  The returned connection should
+     * be used at this point.
+     * @return A new connection object that should be connected to the same server
+     * as the passed in connection.
+     * @throws RserveException This would indicate potential severe problems with the
+     * server that did not allow the connection to be remade.
+     */
     public RConnection reEstablishConnection(final RConnection connection) throws RserveException {
         final RConnectionInfo connectionInfo = activeConnectionMap.remove(connection);
         if (connectionInfo == null) {

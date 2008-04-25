@@ -45,7 +45,7 @@
 					<xs:documentation>The host/ip Rserve is running on.</xs:documentation>
 				</xs:annotation>
 			</xs:attribute>
-			<xs:attribute name="port" type="xs:integer" default="6311">
+			<xs:attribute name="port" type="xs:positiveInteger" default="6311">
 				<xs:annotation>
 					<xs:documentation>The TCP port Rserve is listening on.</xs:documentation>
 				</xs:annotation>
@@ -67,7 +67,7 @@
 			</xs:attribute>
 			<xs:attribute name="embedded" type="xs:boolean" default="false">
 				<xs:annotation>
-					<xs:documentation>If true, the connection pool will attempt to mange the rserve process.</xs:documentation>
+					<xs:documentation>If true, the connection pool will attempt to manage the rserve process.</xs:documentation>
 				</xs:annotation>
 			</xs:attribute>
 		</xs:complexType>
@@ -82,7 +82,7 @@
 					<xs:documentation>The host/ip the of an rmi server that the configuration can be found.</xs:documentation>
 				</xs:annotation>
 			</xs:attribute>
-			<xs:attribute name="port" type="xs:integer" default="1099">
+			<xs:attribute name="port" type="xs:positiveInteger" default="1099">
 				<xs:annotation>
 					<xs:documentation>The port number of the rmi server</xs:documentation>
 				</xs:annotation>

@@ -8,6 +8,7 @@
       <customJdkName value="" />
       <maximumHeapSize value="128" />
       <properties />
+      <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="Foo" />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="RConfigurationServer" />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="RUtils" />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="Rserve" />
@@ -20,6 +21,7 @@
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionFactory.getConnection" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.closeAndReopen" />
+      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.embeddedServer" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.foo" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.invalidateConnection" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.reconfigure" />

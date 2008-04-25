@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit;
 public class TestRConnectionPool {
     /**
      * A pool configuration with a single server on localhost.
-      */
+     */
     private static final String POOL_CONFIGURATION_XML =
             "<RConnectionPool><RConfiguration><RServer host=\"localhost\"/></RConfiguration></RConnectionPool>";
 
@@ -365,6 +365,45 @@ public class TestRConnectionPool {
         pool.reopen();
 
         assertFalse("The pool should be open", pool.isClosed());
+        assertEquals("There should be one connection", 1, pool.getNumberOfConnections());
+        assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
+        assertEquals("The connections should be idle", 1, pool.getNumberOfIdleConnections());
+    }
+
+    /**
+     * Tests re-establishing connections to embedded Rserve instances.
+     * @throws ConfigurationException
+     * @throws RserveException
+     */
+    // @Test - TODO - disabled for now since the command is different on each platform
+    public void embeddedServer() throws ConfigurationException, RserveException {
+        final String xml = "<RConnectionPool><RConfiguration><RServer host=\"localhost\" port=\"6312\" embedded=\"true\" command=\"C:\\\\Program\\ Files\\\\R\\\\R-2.6.0\\\\library\\\\Rserve\\\\Rserve_d.exe\"/></RConfiguration></RConnectionPool>";
+        final XMLConfiguration configuration = new XMLConfiguration();
+        configuration.load(new StringReader(xml));
+        pool = new RConnectionPool(configuration);
+
+        assertEquals("There should be one connection", 1, pool.getNumberOfConnections());
+        assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
+        assertEquals("The connections should be idle", 1, pool.getNumberOfIdleConnections());
+
+        final RConnection connection = pool.borrowConnection();
+        assertNotNull(connection);
+        assertTrue(connection.isConnected());
+
+        assertEquals("There should be one connection", 1, pool.getNumberOfConnections());
+        assertEquals("The connections should be active", 1, pool.getNumberOfActiveConnections());
+        assertEquals("The connections should not be idle", 0, pool.getNumberOfIdleConnections());
+
+        final RConnection newConnection = pool.reEstablishConnection(connection);
+        assertNotNull(newConnection);
+        assertFalse(connection.isConnected());
+        assertTrue(newConnection.isConnected());
+
+        assertEquals("There should be one connection", 1, pool.getNumberOfConnections());
+        assertEquals("The connections should be active", 1, pool.getNumberOfActiveConnections());
+        assertEquals("The connections should not be idle", 0, pool.getNumberOfIdleConnections());
+
+        pool.returnConnection(newConnection);
         assertEquals("There should be one connection", 1, pool.getNumberOfConnections());
         assertEquals("No connections should be active", 0, pool.getNumberOfActiveConnections());
         assertEquals("The connections should be idle", 1, pool.getNumberOfIdleConnections());
