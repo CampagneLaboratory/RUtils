@@ -108,7 +108,7 @@ final class RConfigurationUtils {
                     }
                     poolConfigURL = new File("config" + IOUtils.DIR_SEPARATOR
                             + DEFAULT_XML_CONFIGURATION_FILE).toURI().toURL();
-                } catch (MalformedURLException e) {
+                } catch (MalformedURLException e) { // NOPMD
                     // resource is not a URL
                 }
             }

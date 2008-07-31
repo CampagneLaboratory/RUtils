@@ -195,10 +195,9 @@ public class TestRConnectionPool {
     /**
      * Validates that an attempt to return an invalid connection to the pool throws an error.
      * @throws ConfigurationException if there is a problem setting up the default test connection
-     * @throws RserveException if there is a problem with the connection to the Rserve process
      */
     @Test(expected = NullPointerException.class)
-    public void returnNullConnection() throws ConfigurationException, RserveException {
+    public void returnNullConnection() throws ConfigurationException {
         final XMLConfiguration configuration = new XMLConfiguration();
         configuration.load(new StringReader(POOL_CONFIGURATION_XML));
         pool = new RConnectionPool(configuration);
@@ -342,10 +341,9 @@ public class TestRConnectionPool {
     /**
      * Validates that a pool can be reopened after it has been closed.
      * @throws ConfigurationException if there is a problem setting up the default test connection
-     * @throws RserveException if there is a problem with the connection to the Rserve process
      */
     @Test
-    public void closeAndReopen() throws ConfigurationException, RserveException {
+    public void closeAndReopen() throws ConfigurationException {
         final XMLConfiguration configuration = new XMLConfiguration();
         configuration.load(new StringReader(POOL_CONFIGURATION_XML));
         pool = new RConnectionPool(configuration);

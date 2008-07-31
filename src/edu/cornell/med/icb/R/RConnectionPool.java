@@ -28,7 +28,13 @@ import org.rosuda.REngine.Rserve.RserveException;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -191,7 +197,7 @@ public final class RConnectionPool {
      * @throws ConfigurationException if the configuration cannot be built from the url
      */
     private void configure(final URL configurationURL) throws ConfigurationException {
-        this.configuration = new XMLConfiguration(configurationURL);
+        configuration = new XMLConfiguration(configurationURL);
         configure(configuration);
     }
 
@@ -269,6 +275,10 @@ public final class RConnectionPool {
         configure(configuration);
     }
 
+    /**
+     * Used to get a pool of daemon threads.
+     * @return An service which manages daemon threads for the pool
+     */
     private ExecutorService getThreadPool() {
         synchronized (syncObject) {
             if (threadPool == null || threadPool.isShutdown()) {
@@ -284,8 +294,9 @@ public final class RConnectionPool {
      * @param port Port number where the command should be sent
      * @param username Username to send to the server if authentication is required
      * @param password Password to send to the server if authentication is required
-     * @return true if the connection was added successfully, false otherwise
      * @param embedded indicates that the pool started this connection if set to true
+     * @param command Command used to start the server (used when embedded is true)
+     * @return true if the connection was added successfully, false otherwise
      */
     private boolean addConnection(final String host,
                                   final int port,
@@ -690,7 +701,7 @@ public final class RConnectionPool {
         /**
          * Used to synchronize code blocks.
          */
-        private static final Object holderSyncObject = new Object();
+        private static final Object HOLDER_SYNC_OBJECT = new Object();
 
         /**
          * The singleton instance of the connection pool.
@@ -710,7 +721,7 @@ public final class RConnectionPool {
          */
         private static RConnectionPool getInstance() {
             final RConnectionPool pool;
-            synchronized (holderSyncObject) {
+            synchronized (HOLDER_SYNC_OBJECT) {
                 if (instance == null) {
                     instance = new RConnectionPool();
                 }
@@ -726,7 +737,7 @@ public final class RConnectionPool {
          */
         private static RConnectionPool getInstance(final XMLConfiguration configuration) {
             final RConnectionPool pool;
-            synchronized (holderSyncObject) {
+            synchronized (HOLDER_SYNC_OBJECT) {
                 if (instance == null) {
                     instance = new RConnectionPool(configuration);
                 }
@@ -744,7 +755,7 @@ public final class RConnectionPool {
         private static RConnectionPool getInstance(final URL configurationURL)
                 throws ConfigurationException {
             final RConnectionPool pool;
-            synchronized (holderSyncObject) {
+            synchronized (HOLDER_SYNC_OBJECT) {
                 if (instance == null) {
                     instance = new RConnectionPool(new XMLConfiguration(configurationURL));
                 }

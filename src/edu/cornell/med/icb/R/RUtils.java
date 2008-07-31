@@ -18,7 +18,14 @@
 
 package edu.cornell.med.icb.R;
 
-import org.apache.commons.cli.*;
+import org.apache.commons.cli.BasicParser;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionGroup;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.Parser;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
@@ -30,7 +37,11 @@ import org.apache.commons.logging.LogFactory;
 import org.rosuda.REngine.Rserve.RConnection;
 import org.rosuda.REngine.Rserve.RserveException;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -228,9 +239,15 @@ public final class RUtils {
         formatter.printHelp(RUtils.class.getName(), options, true);
     }
 
+    /**
+     * Current "mode" of operation for the main method.
+     */
     private enum Mode {
+        /** Mode used to start Rserve instances. */
         startup,
+        /** Mode used to shutdown Rserve instances. */
         shutdown,
+        /** Mode used to check whether or not Rserve instances are running. */
         validate
     }
 
@@ -321,7 +338,8 @@ public final class RUtils {
                 }
 
                 configuration.setValidating(true);
-                final int numberOfRServers = configuration.getMaxIndex("RConfiguration.RServer") + 1;
+                final int numberOfRServers =
+                        configuration.getMaxIndex("RConfiguration.RServer") + 1;
                 for (int i = 0; i < numberOfRServers; i++) {
                     final String server = "RConfiguration.RServer(" + i + ")";
                     final String host = configuration.getString(server + "[@host]");
@@ -372,6 +390,8 @@ public final class RUtils {
                     System.out.println("Rserve on " + host + ":" + port + " is "
                             + (connectionIsOk ? "UP" : "DOWN"));
                     break;
+                default:
+                    throw new IllegalArgumentException("Unknown mode: " + mode);
             }
         } catch (RserveException e) {
             // just let the user know and try the other servers
