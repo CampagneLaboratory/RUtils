@@ -18,14 +18,7 @@
 
 package edu.cornell.med.icb.R;
 
-import org.apache.commons.cli.BasicParser;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionGroup;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.Parser;
+import org.apache.commons.cli.*;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
@@ -37,11 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.rosuda.REngine.Rserve.RConnection;
 import org.rosuda.REngine.Rserve.RserveException;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.StringReader;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -107,8 +96,8 @@ public final class RUtils {
      * @return The return value from the Rserve instance
      */
     static Future<Integer> startup(final ExecutorService threadPool, final String rServeCommand,
-                 final String host, final int port,
-                 final String username, final String password) {
+                                   final String host, final int port,
+                                   final String username, final String password) {
         if (LOG.isInfoEnabled()) {
             LOG.info("Attempting to start Rserve on " + host + ":" + port);
         }
@@ -119,7 +108,7 @@ public final class RUtils {
 
                 // if the host is not local, use ssh to exec the command
                 if (!"localhost".equals(host) && !"127.0.0.1".equals(host)
-                    && !InetAddress.getLocalHost().equals(InetAddress.getByName(host))) {
+                        && !InetAddress.getLocalHost().equals(InetAddress.getByName(host))) {
                     commands.add("ssh");
                     commands.add(host);
                 }
@@ -176,7 +165,7 @@ public final class RUtils {
      * @throws RserveException if the process cannot be shutdown properly
      */
     static void shutdown(final String host, final int port,
-                  final String username, final String password) throws RserveException {
+                         final String username, final String password) throws RserveException {
         if (LOG.isInfoEnabled()) {
             LOG.info("Attempting to shutdown Rserve on " + host + ":" + port);
         }
@@ -193,6 +182,43 @@ public final class RUtils {
     }
 
     /**
+     * Can be used to determine if an rserve instance is running or not.
+     * @param host Host where the command should be sent
+     * @param port Port number where the command should be sent
+     * @param username Username to send to the server if authentication is required
+     * @param password Password to send to the server if authentication is required
+     * @return true if the connection to the Rserve instance was sucessful, false otherwise
+     */
+    static boolean validate(final String host, final int port,
+                            final String username, final String password) {
+        boolean connected;
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("Attempting to connect to Rserve on " + host + ":" + port);
+        }
+
+        try {
+            final RConnection rConnection = new RConnection(host, port);
+            if (rConnection.needLogin()) {
+                rConnection.login(username, password);
+            }
+            connected = rConnection.isConnected();
+            LOG.debug("Server version is: " + rConnection.getServerVersion());
+            rConnection.close();
+        } catch (RserveException e) {
+            connected = false;
+            LOG.error("", e);
+        }
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("Was" + (connected ? " " : " NOT ") + "able to connect to Rserve on "
+                    + host + ":" + port);
+        }
+
+        return connected;
+    }
+
+    /**
      * Print usage message for main method.
      *
      * @param options Options used to determine usage
@@ -202,6 +228,12 @@ public final class RUtils {
         formatter.printHelp(RUtils.class.getName(), options, true);
     }
 
+    private enum Mode {
+        startup,
+        shutdown,
+        validate
+    }
+
     public static void main(final String[] args)
             throws ParseException, RserveException, ConfigurationException {
         final Options options = new Options();
@@ -209,14 +241,17 @@ public final class RUtils {
         final Option helpOption = new Option("h", "help", false, "Print this message");
         options.addOption(helpOption);
 
-        final Option startupOption =
-                new Option("startup", "startup", false, "Start Rserve process");
-        final Option shutdownOption =
-                new Option("shutdown", "shutdown", false, "Shutdown Rserve process");
+        final Option startupOption = new Option(Mode.startup.name(), Mode.startup.name(), false,
+                "Start Rserve process");
+        final Option shutdownOption = new Option(Mode.shutdown.name(), Mode.shutdown.name(), false,
+                "Shutdown Rserve process");
+        final Option validateOption = new Option(Mode.validate.name(), Mode.validate.name(), false,
+                "Validate that Rserve processes are running");
 
         final OptionGroup optionGroup = new OptionGroup();
         optionGroup.addOption(startupOption);
         optionGroup.addOption(shutdownOption);
+        optionGroup.addOption(validateOption);
         optionGroup.setRequired(true);
         options.addOptionGroup(optionGroup);
 
@@ -262,7 +297,14 @@ public final class RUtils {
         if (commandLine.hasOption("h")) {
             usage(options);
         } else {
-            final boolean shutdown = commandLine.hasOption("shutdown");
+            Mode mode = null;
+            for (final Mode potentialMode : Mode.values()) {
+                if (commandLine.hasOption(potentialMode.name())) {
+                    mode = potentialMode;
+                    break;
+                }
+            }
+
             final ExecutorService threadPool = Executors.newCachedThreadPool();
 
             if (commandLine.hasOption("configuration")) {
@@ -290,16 +332,7 @@ public final class RUtils {
                     final String command = configuration.getString(server + "[@command]",
                             DEFAULT_RSERVE_COMMAND);
 
-                    try {
-                        if (shutdown) {
-                            shutdown(host, port, username, password);
-                        } else {
-                            startup(threadPool, command, host, port, username, password);
-                        }
-                    } catch (RserveException e) {
-                        // just let the user know and try the other servers
-                        LOG.warn("Couldn't shutdown Rserve on " + host + ":" + port, e);
-                    }
+                    executeMode(mode, threadPool, host, port, username, password, command);
                 }
             } else {
                 final String host = commandLine.getOptionValue("host", "localhost");
@@ -307,13 +340,42 @@ public final class RUtils {
                 final String username = commandLine.getOptionValue("username");
                 final String password = commandLine.getOptionValue("password");
 
-                if (shutdown) {
-                    shutdown(host, port, username, password);
-                } else {
-                    startup(threadPool, DEFAULT_RSERVE_COMMAND, host, port, username, password);
-                }
+                executeMode(mode, threadPool, host, port, username, password, null);
             }
             threadPool.shutdown();
+        }
+    }
+
+    /**
+     * @param mode Mode to execute
+     * @param threadPool The ExecutorService used to start the Rserve process
+     * @param command Full path to command used to start Rserve process
+     * @param host Host where the command should be sent
+     * @param port Port number where the command should be sent
+     * @param username Username to send to the server if authentication is required
+     * @param password Password to send to the server if authentication is required
+     */
+    private static void executeMode(final Mode mode, final ExecutorService threadPool,
+                                    final String host, final int port,
+                                    final String username, final String password,
+                                    final String command) {
+        try {
+            switch (mode) {
+                case shutdown:
+                    shutdown(host, port, username, password);
+                    break;
+                case startup:
+                    startup(threadPool, command, host, port, username, password);
+                    break;
+                case validate:
+                    final boolean connectionIsOk = validate(host, port, username, password);
+                    System.out.println("Rserve on " + host + ":" + port + " is "
+                            + (connectionIsOk ? "UP" : "DOWN"));
+                    break;
+            }
+        } catch (RserveException e) {
+            // just let the user know and try the other servers
+            LOG.warn("Couldn't shutdown Rserve on " + host + ":" + port, e);
         }
     }
 

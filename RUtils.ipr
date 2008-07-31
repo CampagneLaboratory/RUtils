@@ -15,6 +15,7 @@
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="SSHExec" />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="Unnamed" />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="startup" />
+      <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="validate" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="All in RUtils" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConfigurationItem" />
@@ -739,7 +740,7 @@
     </configuration>
     <configuration default="false" name="RConfigurationServer" type="Application" factoryName="Application" enabled="false" merge="false">
       <option name="MAIN_CLASS_NAME" value="edu.cornell.med.icb.R.RConfigurationServer" />
-      <option name="VM_PARAMETERS" value="-Djava.security.policy=&quot;file:/C:/Documents%20and%20Settings/Marko/My%20Documents/IdeaProjects/RUtils/config/server.policy&quot; -Djava.rmi.server.codebase=&quot;file:/C:/Documents%20and%20Settings/Marko/My%20Documents/IdeaProjects/RUtils/classes&quot;" />
+      <option name="VM_PARAMETERS" value="-Djava.security.policy=&quot;file:/$PROJECT_DIR$/../../../../../Documents%20and%20Settings/Marko/My%20Documents/IdeaProjects/RUtils/config/server.policy&quot; -Djava.rmi.server.codebase=&quot;file:/$PROJECT_DIR$/../../../../../Documents%20and%20Settings/Marko/My%20Documents/IdeaProjects/RUtils/classes&quot;" />
       <option name="PROGRAM_PARAMETERS" value="" />
       <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
@@ -788,6 +789,31 @@
         <option name="WINDOW" value="false" />
         <option name="JVMPI" value="false" />
         <option name="INTERPRETED" value="false" />
+      </RunnerSettings>
+      <RunnerSettings RunnerId="Run" />
+      <ConfigurationWrapper RunnerId="Debug" />
+      <ConfigurationWrapper RunnerId="Run" />
+      <method>
+        <option name="Run Ant target" value="true" />
+        <option name="Make" value="false" />
+      </method>
+    </configuration>
+    <configuration default="false" name="validate" type="Application" factoryName="Application" enabled="false" merge="false">
+      <option name="MAIN_CLASS_NAME" value="edu.cornell.med.icb.R.RUtils" />
+      <option name="VM_PARAMETERS" value="" />
+      <option name="PROGRAM_PARAMETERS" value="--validate -configuration &quot;C:\Documents and Settings\Marko\My Documents\IdeaProjects\RUtils\config\RConnectionPool.xml&quot;" />
+      <option name="WORKING_DIRECTORY" value="file://$PROJECT_DIR$" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" value="" />
+      <option name="ENABLE_SWING_INSPECTOR" value="false" />
+      <option name="ENV_VARIABLES" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <module name="RUtils" />
+      <envs />
+      <RunnerSettings RunnerId="Debug">
+        <option name="DEBUG_PORT" value="2512" />
+        <option name="TRANSPORT" value="0" />
+        <option name="LOCAL" value="true" />
       </RunnerSettings>
       <RunnerSettings RunnerId="Run" />
       <ConfigurationWrapper RunnerId="Debug" />
@@ -889,6 +915,7 @@
         </entry>
       </map>
     </option>
+    <option name="myVersion" value="123" />
   </component>
   <component name="SvnChangesBrowserSettings">
     <option name="USE_AUTHOR_FIELD" value="true" />

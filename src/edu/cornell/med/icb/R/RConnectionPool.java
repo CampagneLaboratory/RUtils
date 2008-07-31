@@ -28,13 +28,7 @@ import org.rosuda.REngine.Rserve.RserveException;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -608,7 +602,7 @@ public final class RConnectionPool {
 
         if (log.isDebugEnabled()) {
             log.debug("Thread " + Thread.currentThread().getName()
-                    + "Returning connection with " + connectionInfo.getHost()
+                    + " Returning connection with " + connectionInfo.getHost()
                     + ":" + connectionInfo.getPort());
              log.debug("Number of active connections = " + activeConnectionMap.size());
         }
