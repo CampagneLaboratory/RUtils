@@ -157,7 +157,7 @@
         </java>
     </target>
 
-    <target name="validate" depends="compile" description="Displas status of Rserve instances defined in a configuration file">
+    <target name="validate" depends="compile" description="Displays status of Rserve instances defined in a configuration file">
         <java classname="edu.cornell.med.icb.R.RUtils" fork="true" failonerror="true">
             <classpath refid="classpath"/>
             <arg value="--validate"/>
