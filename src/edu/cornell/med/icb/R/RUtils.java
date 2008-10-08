@@ -48,6 +48,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -311,6 +312,7 @@ public final class RUtils {
             throw e;
         }
 
+        int exitStatus = 0;
         if (commandLine.hasOption("h")) {
             usage(options);
         } else {
@@ -340,6 +342,7 @@ public final class RUtils {
                 configuration.setValidating(true);
                 final int numberOfRServers =
                         configuration.getMaxIndex("RConfiguration.RServer") + 1;
+                boolean failed = false;
                 for (int i = 0; i < numberOfRServers; i++) {
                     final String server = "RConfiguration.RServer(" + i + ")";
                     final String host = configuration.getString(server + "[@host]");
@@ -350,7 +353,12 @@ public final class RUtils {
                     final String command = configuration.getString(server + "[@command]",
                             DEFAULT_RSERVE_COMMAND);
 
-                    executeMode(mode, threadPool, host, port, username, password, command);
+                    if (executeMode(mode, threadPool, host, port, username, password, command) != 0) {
+                        failed = true;  // we have other hosts to check so keep a failed state
+                    }
+                }
+                if (failed) {
+                    exitStatus = 3;
                 }
             } else {
                 final String host = commandLine.getOptionValue("host", "localhost");
@@ -358,10 +366,12 @@ public final class RUtils {
                 final String username = commandLine.getOptionValue("username");
                 final String password = commandLine.getOptionValue("password");
 
-                executeMode(mode, threadPool, host, port, username, password, null);
+                exitStatus = executeMode(mode, threadPool, host, port, username, password, null);
             }
             threadPool.shutdown();
         }
+
+        System.exit(exitStatus);
     }
 
     /**
@@ -372,35 +382,52 @@ public final class RUtils {
      * @param port Port number where the command should be sent
      * @param username Username to send to the server if authentication is required
      * @param password Password to send to the server if authentication is required
+     * @return 0 if the mode was executed successfully
      */
-    private static void executeMode(final Mode mode, final ExecutorService threadPool,
-                                    final String host, final int port,
-                                    final String username, final String password,
-                                    final String command) {
-        try {
-            switch (mode) {
-                case shutdown:
+    private static int executeMode(final Mode mode, final ExecutorService threadPool,
+                                   final String host, final int port,
+                                   final String username, final String password,
+                                   final String command) {
+        int status = 0;
+
+        switch (mode) {
+            case shutdown:
+                try {
                     shutdown(host, port, username, password);
-                    break;
-                case startup:
-                    startup(threadPool, command, host, port, username, password);
-                    break;
-                case validate:
-                    final boolean connectionIsOk = validate(host, port, username, password);
-                    System.out.println("Rserve on " + host + ":" + port + " is "
-                            + (connectionIsOk ? "UP" : "DOWN"));
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unknown mode: " + mode);
-            }
-        } catch (RserveException e) {
-            // just let the user know and try the other servers
-            LOG.warn("Couldn't shutdown Rserve on " + host + ":" + port, e);
+                } catch (RserveException e) {
+                    // just let the user know and try the other servers
+                    LOG.warn("Couldn't shutdown Rserve on " + host + ":" + port, e);
+                    status = 1;
+                }
+                break;
+            case startup:
+                final Future<Integer> future =
+                        startup(threadPool, command, host, port, username, password);
+                try {
+                    status = future.get();
+                } catch (ExecutionException e) {
+                    LOG.warn("Couldn't shutdown Rserve on " + host + ":" + port, e);
+                    status = 2;
+                } catch (InterruptedException e) {
+                    LOG.error("Interrupted!", e);
+                    Thread.currentThread().interrupt();
+                }
+                break;
+            case validate:
+                final boolean connectionIsOk = validate(host, port, username, password);
+                System.out.println("Rserve on " + host + ":" + port + " is "
+                        + (connectionIsOk ? "UP" : "DOWN"));
+                status = connectionIsOk ? 0 : 42;
+                break;
+            default:
+                throw new IllegalArgumentException("Unknown mode: " + mode);
         }
+
+        return status;
     }
 
     /**
-     * Make an an XMLConfiguration fo RConnectionPool.
+     * Make an an XMLConfiguration for RConnectionPool.
      * @param port the port on "localhost" to connect to
      * @return the XMLConfiguration
      * @throws ConfigurationException problem configuring with specified parameters
