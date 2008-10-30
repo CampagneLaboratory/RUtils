@@ -23,7 +23,6 @@ import org.rosuda.REngine.Rserve.RserveException;
 import org.rosuda.REngine.REXPMismatchException;
 import org.rosuda.REngine.REngineException;
 
-import java.io.File;
 import java.io.IOException;
 
 import static junit.framework.Assert.assertEquals;
@@ -77,6 +76,4 @@ public class TestRScript {
             assertEquals(expected[i], actual[i]);
         }
     }
-
-
 }
