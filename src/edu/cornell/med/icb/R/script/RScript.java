@@ -25,9 +25,7 @@ import edu.cornell.med.icb.io.ResourceFinder;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
-import java.io.File;
 import java.io.IOException;
-import java.io.FileNotFoundException;
 import java.net.URL;
 
 import org.apache.commons.lang.StringUtils;
@@ -72,22 +70,32 @@ public class RScript {
     private final String script;
 
     /**
-     * Create an RScript with an R script file.
-     * @param scriptFile the R script stored in a file. FILENAME!!
-     * @throws IOException error reading scriptFile
+     * Create an RScript via a script resource name or file name.
+     * @param scriptResource the script resource name or filename which contains an R script
+     * @return the new RScript object
+     * @throws IOException error reading the scriptResource (or file)
      */
-    public RScript(final String scriptFile) throws IOException {
-        this(readScript(scriptFile));
+    public static RScript createFromResource(final String scriptResource) throws IOException {
+        return new RScript(readScript(scriptResource));
+    }
+
+    /**
+     * Create an RScript from an R Script stored in a string (not a resource or file name).
+     * @param script the R script
+     * @return the new RScript object
+     */
+    public static RScript createFromScriptString(final String script) {
+        return new RScript(script);
     }
 
     /**
      * Create an RScript with an R script stored in a StringBuilder.
-     * @param scriptSb the R script (NOT a filename)
+     * @param scriptVal the R script (NOT a filename)
      */
-    public RScript(final StringBuilder scriptSb) {
+    private RScript(final String scriptVal) {
         inputMap = new HashMap<String, RDataObject>();
         outputMap = new HashMap<String, RDataObject>();
-        script = scriptSb.toString();
+        script = scriptVal;
     }
 
     /**
@@ -358,7 +366,7 @@ public class RScript {
      * @return the String value of the R script (content of file)
      * @throws java.io.IOException error reading the file
      */
-    private synchronized static StringBuilder readScript(final String scriptFilename)
+    private synchronized static String readScript(final String scriptFilename)
             throws IOException {
         StringBuilder script = FILENAME_TO_SCRIPT_MAP.get(scriptFilename);
         if (script == null) {
@@ -380,7 +388,7 @@ public class RScript {
             }
             FILENAME_TO_SCRIPT_MAP.put(scriptFilename, script);
         }
-        return script;
+        return script.toString();
     }
 
 }

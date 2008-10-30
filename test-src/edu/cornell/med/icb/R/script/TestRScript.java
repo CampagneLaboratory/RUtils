@@ -43,7 +43,7 @@ public class TestRScript {
     public void testRHelper()
             throws IOException, RserveException, REXPMismatchException, REngineException {
 
-        final RScript rscript = new RScript("rscripts/test_sum_prod.R");
+        final RScript rscript = RScript.createFromResource("rscripts/test_sum_prod.R");
         rscript.setInput("base", 2.0d);
         rscript.setInput("values", new double[] {1.0, 2.0, 3.0, 4.0, 5.0});
 
