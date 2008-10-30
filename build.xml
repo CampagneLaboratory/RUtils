@@ -53,6 +53,11 @@
                optimize="${optimize}" deprecation="${deprecation}">
             <classpath refid="compile.classpath"/>
         </javac>
+        <!-- Copy rscripts from src/rscripts -->
+        <mkdir dir="${classes}/rscripts"/>
+        <copy todir="${classes}/rscripts">
+          <fileset dir="${src}/rscripts"/>
+        </copy>
     </target>
 
     <target name="jar" depends="jar-api, jar-full" description="Create jar files for R Utilities"/>
