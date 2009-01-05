@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2008 Institute for Computational Biomedicine,
- *                    Weill Medical College of Cornell University
+ * Copyright (C) 2008-2009 Institute for Computational Biomedicine,
+ *                         Weill Medical College of Cornell University
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
