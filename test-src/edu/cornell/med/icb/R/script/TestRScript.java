@@ -81,4 +81,37 @@ public class TestRScript {
         TestRDataObject.assertDoubleArrayEquals(new double[] {23.0d, 723.0d},
                 rscript.getOutputDoubleArray("comb"));
     }
+
+    /**
+     * This is the code that is the example in the ICB wiki. Pasted here to verify
+     * that it works correctly.
+     * @throws REngineException rserve exception
+     * @throws REXPMismatchException rserve exception
+     * @throws RserveException rserve exception
+     */
+    @Test
+    public void testCodeFromWiki() throws REngineException, REXPMismatchException, RserveException {
+        final String ksTest =
+           "q <- ks.test(x,y)" + "\n"
+           + "p_value <- q$p.value" + "\n"
+           + "test_statistic <- q$statistic[[1]]";
+        final RScript rscript = RScript.createFromScriptString(ksTest);
+
+        final double[] xValues = new double[] {0.1, 0.2, 0.3, 0.4, 0.5};
+        final double[] yValues = new double[] {0.6, 0.7, 0.8, 0.9, 1.0};
+        // Specify the input variable names and values for the script.
+        rscript.setInput("x", xValues);
+        rscript.setInput("y", yValues);
+        // Specify the variable names and types for the script output.
+        // This should be specified before we execute the script.
+        rscript.setOutput("p_value", RDataObjectType.Double);
+        rscript.setOutput("test_statistic", RDataObjectType.Double);
+
+        rscript.execute();
+        final double pvalue = rscript.getOutputDouble("p_value");
+        final double testStat = rscript.getOutputDouble("test_statistic");
+
+        assertEquals(0.00793d, pvalue, 0.0001d);
+        assertEquals(1.0d, testStat);
+    }
 }
