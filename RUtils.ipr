@@ -7,33 +7,19 @@
       <antReference projectDefault="true" />
       <customJdkName value="" />
       <maximumHeapSize value="128" />
+      <maximumStackSize value="32" />
       <properties />
-      <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="Foo" />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="RConfigurationServer" />
-      <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="RUtils" />
-      <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="Rserve" />
-      <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="SSHExec" />
-      <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="Unnamed" />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="startup" />
       <executeOn event="beforeRun" target="compile" runConfigurationType="Application" runConfigurationName="validate" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="All in RUtils" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConfigurationItem" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionFactory.getConnection" />
+      <executeOn event="beforeRun" target="compile-tests" />
       <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.closeAndReopen" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.embeddedServer" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.foo" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.invalidateConnection" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.reconfigure" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.returnClosedConnection" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.returnNullConnection" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.validConnection" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="TestRConnectionPool.validateSingleton" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="Unnamed" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="edu.cornell.med.icb.R in RUtils" />
-      <executeOn event="beforeRun" target="compile-tests" runConfigurationType="JUnit" runConfigurationName="package-info in RUtils" />
     </buildFile>
+  </component>
+  <component name="BSFConsole">
+    <option name="searchOptions">
+      <BSFConsoleSearchOptions />
+    </option>
   </component>
   <component name="BuildJarProjectSettings">
     <option name="BUILD_JARS_ON_MAKE" value="false" />
@@ -162,6 +148,7 @@
     <option name="ADDITIONAL_OPTIONS_STRING" value="" />
     <option name="MAXIMUM_HEAP_SIZE" value="128" />
   </component>
+  <component name="Encoding" useUTFGuessing="true" native2AsciiForPropertiesFiles="false" />
   <component name="EntryPointsManager">
     <entry_points version="2.0" />
   </component>
@@ -252,7 +239,10 @@
         <inspection_tool class="UnnecessaryBlockStatement" level="WARNING" enabled="true" />
         <inspection_tool class="UnnecessaryEnumModifier" level="WARNING" enabled="true" />
         <inspection_tool class="UnnecessaryInterfaceModifier" level="WARNING" enabled="true" />
-        <inspection_tool class="UnnecessaryParentheses" level="WARNING" enabled="true" />
+        <inspection_tool class="UnnecessaryParentheses" level="WARNING" enabled="true">
+          <option name="ignoreClarifyingParentheses" value="false" />
+          <option name="ignoreParenthesesOnConditionals" value="false" />
+        </inspection_tool>
         <inspection_tool class="MultipleTypedDeclaration" level="WARNING" enabled="true" />
         <inspection_tool class="ImplicitCallToSuper" level="WARNING" enabled="true">
           <option name="m_ignoreForObjectSubclasses" value="false" />
@@ -481,7 +471,9 @@
         <inspection_tool class="StaticMethodOnlyUsedInOneClass" level="WARNING" enabled="true" />
         <inspection_tool class="InstanceofCatchParameter" level="WARNING" enabled="true" />
         <inspection_tool class="NestedTryStatement" level="WARNING" enabled="true" />
-        <inspection_tool class="TooBroadCatch" level="WARNING" enabled="true" />
+        <inspection_tool class="TooBroadCatch" level="WARNING" enabled="true">
+          <option name="onlyWarnOnRootExceptions" value="false" />
+        </inspection_tool>
         <inspection_tool class="BadExceptionCaught" level="WARNING" enabled="true">
           <option name="exceptionsString" value="java.lang.NullPointerException,java.lang.IllegalMonitorStateException,java.lang.ArrayIndexOutOfBoundsException" />
         </inspection_tool>
@@ -491,9 +483,7 @@
         <inspection_tool class="ExceptionFromCatchWhichDoesntWrap" level="WARNING" enabled="true">
           <option name="ignoreGetMessage" value="false" />
         </inspection_tool>
-        <inspection_tool class="MissingOverrideAnnotation" level="WARNING" enabled="true">
-          <option name="useJdk6Rules" value="false" />
-        </inspection_tool>
+        <inspection_tool class="MissingOverrideAnnotation" level="WARNING" enabled="true" />
         <inspection_tool class="MissingDeprecatedAnnotation" level="WARNING" enabled="true" />
         <inspection_tool class="ProtectedMemberInFinalClass" level="WARNING" enabled="true" />
         <inspection_tool class="PublicConstructorInNonPublicClass" level="WARNING" enabled="true" />
@@ -692,6 +682,9 @@
     <option name="USE_CLIENT_FILTER" value="true" />
     <option name="CLIENT" value="" />
   </component>
+  <component name="ProjectDetails">
+    <option name="projectName" value="RUtils" />
+  </component>
   <component name="ProjectFileVersion" converted="true" />
   <component name="ProjectLibrariesConfigurable.UI">
     <option name="proportions">
@@ -703,11 +696,11 @@
       <module fileurl="file://$PROJECT_DIR$/RUtils.iml" filepath="$PROJECT_DIR$/RUtils.iml" />
     </modules>
   </component>
-  <component name="ProjectRootManager" version="2" assert-keyword="true" jdk-15="true" project-jdk-name="1.6" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_5" assert-keyword="true" jdk-15="true" project-jdk-name="1.6" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
   <component name="ProjectRunConfigurationManager">
-    <configuration default="false" name="startup" type="Application" factoryName="Application" enabled="false" merge="false">
+    <configuration default="false" name="startup" type="Application" factoryName="Application" enabled="false" merge="false" runner="emma">
       <option name="MAIN_CLASS_NAME" value="edu.cornell.med.icb.R.RUtils" />
       <option name="VM_PARAMETERS" value="" />
       <option name="PROGRAM_PARAMETERS" value="--startup --configuration &quot;C:\Documents and Settings\Marko\My Documents\IdeaProjects\RUtils\config\RConnectionPool.xml&quot;" />
@@ -737,7 +730,7 @@
         <option name="Make" value="false" />
       </method>
     </configuration>
-    <configuration default="false" name="RConfigurationServer" type="Application" factoryName="Application" enabled="false" merge="false">
+    <configuration default="false" name="RConfigurationServer" type="Application" factoryName="Application" enabled="false" merge="false" runner="emma">
       <option name="MAIN_CLASS_NAME" value="edu.cornell.med.icb.R.RConfigurationServer" />
       <option name="VM_PARAMETERS" value="-Djava.security.policy=&quot;file:/$PROJECT_DIR$/../../../../../Documents%20and%20Settings/Marko/My%20Documents/IdeaProjects/RUtils/config/server.policy&quot; -Djava.rmi.server.codebase=&quot;file:/$PROJECT_DIR$/../../../../../Documents%20and%20Settings/Marko/My%20Documents/IdeaProjects/RUtils/classes&quot;" />
       <option name="PROGRAM_PARAMETERS" value="" />
@@ -767,7 +760,7 @@
         <option name="Make" value="false" />
       </method>
     </configuration>
-    <configuration default="false" name="shutdown" type="Application" factoryName="Application" enabled="false" merge="false">
+    <configuration default="false" name="shutdown" type="Application" factoryName="Application" enabled="false" merge="false" runner="emma">
       <option name="MAIN_CLASS_NAME" value="edu.cornell.med.icb.R.RUtils" />
       <option name="VM_PARAMETERS" value="" />
       <option name="PROGRAM_PARAMETERS" value="--shutdown --configuration &quot;C:\Documents and Settings\Marko\My Documents\IdeaProjects\RUtils\config\RConnectionPool.xml&quot;" />
@@ -797,7 +790,7 @@
         <option name="Make" value="false" />
       </method>
     </configuration>
-    <configuration default="false" name="validate" type="Application" factoryName="Application" enabled="false" merge="false">
+    <configuration default="false" name="validate" type="Application" factoryName="Application" enabled="false" merge="false" runner="emma">
       <option name="MAIN_CLASS_NAME" value="edu.cornell.med.icb.R.RUtils" />
       <option name="VM_PARAMETERS" value="" />
       <option name="PROGRAM_PARAMETERS" value="--validate -configuration &quot;C:\Documents and Settings\Marko\My Documents\IdeaProjects\RUtils\config\RConnectionPool.xml&quot;" />
@@ -822,8 +815,11 @@
         <option name="Make" value="false" />
       </method>
     </configuration>
-    <configuration default="false" name="TestRConnectionPool" type="JUnit" factoryName="JUnit" enabled="false" merge="false">
-      <pattern value="edu.cornell.med.icb.R.*" />
+    <configuration default="false" name="TestRConnectionPool" type="JUnit" factoryName="JUnit" enabled="false" merge="false" runner="emma">
+      <pattern>
+        <option name="PATTERN" value="edu.cornell.med.icb.R.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
       <module name="RUtils" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
       <option name="ALTERNATIVE_JRE_PATH" value="" />
@@ -914,7 +910,7 @@
         </entry>
       </map>
     </option>
-    <option name="myVersion" value="123" />
+    <option name="myVersion" value="124" />
   </component>
   <component name="SvnChangesBrowserSettings">
     <option name="USE_AUTHOR_FIELD" value="true" />

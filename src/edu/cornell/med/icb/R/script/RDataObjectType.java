@@ -30,10 +30,12 @@ package edu.cornell.med.icb.R.script;
 public enum RDataObjectType {
     /** A single String. */
     String,
-    /** A String[]. */
+    /** A String[], an R c(strings). */
     StringArray,
     /** A double. */
     Double,
-    /** A double[]. */
+    /** A double[], an R c(doubles). */
     DoubleArray,
+    /** A double[][], an R matrix. */
+    Double2DArray,
 }

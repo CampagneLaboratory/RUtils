@@ -19,24 +19,23 @@
 package edu.cornell.med.icb.R.script;
 
 import edu.cornell.med.icb.R.RConnectionPool;
-import edu.cornell.med.icb.iterators.TextFileLineIterator;
 import edu.cornell.med.icb.io.ResourceFinder;
-
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-import java.io.IOException;
-import java.net.URL;
-
-import org.apache.commons.lang.StringUtils;
+import edu.cornell.med.icb.iterators.TextFileLineIterator;
 import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.rosuda.REngine.Rserve.RserveException;
-import org.rosuda.REngine.Rserve.RConnection;
+import org.rosuda.REngine.REXP;
 import org.rosuda.REngine.REXPMismatchException;
 import org.rosuda.REngine.REngineException;
-import org.rosuda.REngine.REXP;
+import org.rosuda.REngine.Rserve.RConnection;
+import org.rosuda.REngine.Rserve.RserveException;
+
+import java.io.IOException;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * An RScript where you can specify inputs and retrieve specific output
@@ -51,6 +50,7 @@ public class RScript {
      */
     private static final Log LOG = LogFactory.getLog(RScript.class);
 
+    /** The resource finder. */
     private static ResourceFinder resourceFinder = new ResourceFinder();
 
     /** The R Connection Pool object. */
@@ -153,6 +153,17 @@ public class RScript {
     }
 
     /**
+     * Add an input with a double[][] value.
+     * @param fieldName the field name
+     * @param value the double[] input value
+     */
+    public void setInput(final String fieldName, final double[][] value) {
+        assert value != null;
+        inputMap.put(fieldName, new RDataObject(
+                RDataObjectType.Double2DArray, fieldName, value));
+    }
+
+    /**
      * Get the output String value for a specific field.
      * If that field is not defined, returns null.
      * @param fieldName the field to get output data for
@@ -206,6 +217,20 @@ public class RScript {
             return null;
         }
         return (double[]) field.getValue();
+    }
+
+    /**
+     * Get the output double[][] value for a specific field.
+     * If that field is not defined, returns null.
+     * @param fieldName the field to get output data for
+     * @return output double[] value
+     */
+    public double[][] getOutputDouble2DArray(final String fieldName) {
+        final RDataObject field = outputMap.get(fieldName);
+        if (field == null) {
+            return null;
+        }
+        return (double[][]) field.getValue();
     }
 
     /**
@@ -276,7 +301,7 @@ public class RScript {
     }
 
     /**
-     * Before the script executes, configure the input variables on the connection
+     * Before the script executes, configure the input variables on the connection.
      * @param connection the rconnection
      * @throws RserveException r server error
      * @throws REngineException r server error
@@ -317,6 +342,23 @@ public class RScript {
                             ArrayUtils.toString(input.getValue())));
                 }
                 connection.assign(input.getFieldName(), (double[]) input.getValue());
+            } else if (input.getDataType() == RDataObjectType.Double2DArray) {
+                final double[][] twoDValues = (double[][]) input.getValue();
+                final int numRows = twoDValues.length;
+                final String oneDFieldName = input.getFieldName() + "_1D_DATA";
+                // Convert the double[][] into a double[] and use connection.assign to
+                // send that data to R
+                connection.assign(oneDFieldName, RDataObject.flatten2DArrayByRows(twoDValues));
+                // Use R code to create the matrix from the double[]
+                // This seems slightly inefficient, memorywise in both R and Java,
+                // but I am not aware of a good way to get the double[][] directly
+                // into R.
+                final String rcode = String.format("%s <- matrix(%s, nrow=%d, byrow=TRUE)",
+                        input.getFieldName(), oneDFieldName, numRows);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug(String.format("R-input: %s", rcode));
+                }
+                connection.voidEval(rcode);
             }
         }
     }
@@ -340,19 +382,21 @@ public class RScript {
                 output.setValue(expression.asDouble());
             } else if (output.getDataType() == RDataObjectType.DoubleArray) {
                 output.setValue(expression.asDoubles());
+            } else if (output.getDataType() == RDataObjectType.Double2DArray) {
+                output.setValue(expression.asDoubleMatrix());
             }
         }
     }
 
     /**
      * The r server error message.
-     * @param script the script
+     * @param scriptValue the script
      * @return the error message
      */
-    private String errorMessage(final String script) {
+    private String errorMessage(final String scriptValue) {
         return String.format("Error executing R script [%s]. This should look like R code, "
-                + "if it looks like a filename you can called RScriptHelper incorrectly.",
-                script);
+                + "if it looks like a filename you can called RScript incorrectly.",
+                scriptValue);
     }
 
     /**
@@ -366,7 +410,7 @@ public class RScript {
      * @return the String value of the R script (content of file)
      * @throws java.io.IOException error reading the file
      */
-    private synchronized static String readScript(final String scriptFilename)
+    private static synchronized String readScript(final String scriptFilename)
             throws IOException {
         StringBuilder script = FILENAME_TO_SCRIPT_MAP.get(scriptFilename);
         if (script == null) {
@@ -390,5 +434,4 @@ public class RScript {
         }
         return script.toString();
     }
-
 }

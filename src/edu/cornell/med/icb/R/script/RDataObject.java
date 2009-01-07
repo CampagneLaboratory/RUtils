@@ -89,4 +89,38 @@ public class RDataObject {
     void setValue(final Object val) {
         this.value = val;
     }
+
+    /**
+     * Take a double[][] and flatten it to a double[].
+     * @param src the double[][]
+     * @return the double[] containing the data from src
+     */
+    public static double[] flatten2DArrayByRows(final double[][] src) {
+        final int numRows = src.length;
+        final int rowLength = src[0].length;
+        final double[] dest = new double[numRows * rowLength];
+        int pos = 0;
+        for (double[] srcByRow : src) {
+            System.arraycopy(srcByRow, 0, dest, pos, rowLength);
+            pos += rowLength;
+        }
+        return dest;
+    }
+
+    /**
+     * Take a long[][] and flatten it to a double[].
+     * @param src the long[][]
+     * @return the long[] containing the data from src
+     */
+    public static long[] flatten2DArrayByRows(final long[][] src) {
+        final int numRows = src.length;
+        final int rowLength = src[0].length;
+        final long[] dest = new long[numRows * rowLength];
+        int pos = 0;
+        for (long[] srcByRow : src) {
+            System.arraycopy(srcByRow, 0, dest, pos, rowLength);
+            pos += rowLength;
+        }
+        return dest;
+    }
 }

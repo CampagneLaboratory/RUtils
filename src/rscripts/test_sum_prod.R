@@ -24,3 +24,6 @@ prodfx <- function(base, values) {
 sum <- sumfx(base, values)
 prod <- prodfx(base, values)
 comb <- c(sum,prod)
+
+# Just copy what should be a matrix of doubles into twodoutput
+twodoutput <- twodvalues

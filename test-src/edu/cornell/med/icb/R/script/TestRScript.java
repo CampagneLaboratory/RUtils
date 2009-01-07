@@ -18,14 +18,13 @@
 
 package edu.cornell.med.icb.R.script;
 
+import static junit.framework.Assert.assertEquals;
 import org.junit.Test;
-import org.rosuda.REngine.Rserve.RserveException;
 import org.rosuda.REngine.REXPMismatchException;
 import org.rosuda.REngine.REngineException;
+import org.rosuda.REngine.Rserve.RserveException;
 
 import java.io.IOException;
-
-import static junit.framework.Assert.assertEquals;
 
 /**
  * Test the RScript class.
@@ -43,13 +42,23 @@ public class TestRScript {
     public void testRHelper()
             throws IOException, RserveException, REXPMismatchException, REngineException {
 
+        double[][] srcData = new double[][] {
+                {1.0, 2.0, 3.0, 4.0},
+                {5.0, 6.0, 7.0, 8.0},
+                {9.0, 10.0, 11.0, 12.0}};
+
         final RScript rscript = RScript.createFromResource("rscripts/test_sum_prod.R");
         rscript.setInput("base", 2.0d);
         rscript.setInput("values", new double[] {1.0, 2.0, 3.0, 4.0, 5.0});
+        // Place a 2d array of doubles in twodvalues
+        rscript.setInput("twodvalues", srcData);
 
         rscript.setOutput("sum", RDataObjectType.Double);
         rscript.setOutput("prod", RDataObjectType.Double);
         rscript.setOutput("comb", RDataObjectType.DoubleArray);
+
+        // Retrieve the 2d array of doubles from twodoutput.
+        rscript.setOutput("twodoutput", RDataObjectType.Double2DArray);
 
         // Execute the script with the given outputs and obtain the outputs
         rscript.execute();
@@ -57,8 +66,11 @@ public class TestRScript {
         // Assert that we have the proper values in outputs
         assertEquals(17.0d, rscript.getOutputDouble("sum"));
         assertEquals(122.0d, rscript.getOutputDouble("prod"));
-        assertSameArray(new double[] {17.0d, 122.0d},
+        TestRDataObject.assertDoubleArrayEquals(new double[] {17.0d, 122.0d},
                 rscript.getOutputDoubleArray("comb"));
+
+        TestRDataObject.assertDouble2DArrayEquals(srcData,
+                rscript.getOutputDouble2DArray("twodoutput"));
 
         // Update the inputs and rerun
         rscript.setInput("base", 3.0d);
@@ -66,14 +78,7 @@ public class TestRScript {
         rscript.execute();
         assertEquals(23.0d, rscript.getOutputDouble("sum"));
         assertEquals(723.0d, rscript.getOutputDouble("prod"));
-        assertSameArray(new double[] {23.0d, 723.0d},
+        TestRDataObject.assertDoubleArrayEquals(new double[] {23.0d, 723.0d},
                 rscript.getOutputDoubleArray("comb"));
-    }
-
-    private void assertSameArray(final double[] expected, final double[] actual) {
-        assertEquals(expected.length, actual.length);
-        for (int i = 0; i < expected.length; i++) {
-            assertEquals(expected[i], actual[i]);
-        }
     }
 }
