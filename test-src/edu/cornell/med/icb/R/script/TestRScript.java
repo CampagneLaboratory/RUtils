@@ -103,7 +103,7 @@ public class TestRScript {
         rscript.setInput("x", xValues);
         rscript.setInput("y", yValues);
         // Specify the variable names and types for the script output.
-        // This should be specified before we execute the script.
+        // Outputs should be specified before we execute the script.
         rscript.setOutput("p_value", RDataObjectType.Double);
         rscript.setOutput("test_statistic", RDataObjectType.Double);
 
