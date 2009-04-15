@@ -686,6 +686,9 @@
     <option name="projectName" value="RUtils" />
   </component>
   <component name="ProjectFileVersion" converted="true" />
+  <component name="ProjectKey">
+    <option name="state" value="https://pbtech-vc.med.cornell.edu/public/svn/icb/trunk/icb-commons/RUtils/RUtils.ipr" />
+  </component>
   <component name="ProjectLibrariesConfigurable.UI">
     <option name="proportions">
       <SplitterProportionsDataImpl />
@@ -911,6 +914,7 @@
       </map>
     </option>
     <option name="myVersion" value="124" />
+    <option name="mySupportsUserInfoFilter" value="true" />
   </component>
   <component name="SvnChangesBrowserSettings">
     <option name="USE_AUTHOR_FIELD" value="true" />
@@ -947,6 +951,11 @@
   </component>
   <component name="com.intellij.profile.ui.ErrorOptionsConfigurable" proportions="" version="1">
     <option name="myLastEditedConfigurable" />
+  </component>
+  <component name="copyright">
+    <Base>
+      <setting name="state" value="2" />
+    </Base>
   </component>
 </project>
 
