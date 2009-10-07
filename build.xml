@@ -1,20 +1,6 @@
 <project name="icb-rutils" default="test" basedir=".">
-    <tstamp>
-        <!-- current time for buildstamp purposes -->
-        <format property="buildstamp" pattern="yyyyMMddHHmmss"/>
-    </tstamp>
-    <tstamp>
-        <format property="year" pattern="yyyy"/>
-    </tstamp>
+    <import file="buildsupport/build.xml"/>
 
-    <property environment="env" />
-    <property name="classes" location="classes"/>
-    <property name="lib" location="lib"/>
-    <property name="src" location="src"/>
-    <property name="javadocs" location="javadocs"/>
-    <property name="config" location="config"/>
-    <property name="logs" location="logs"/>
-    <property name="test-src" location="test-src"/>
     <property name="jarfile" value="icb-rutils.jar"/>
     <property name="api-jarfile" value="icb-rutils-api.jar"/>
 
@@ -24,6 +10,9 @@
     <property name="deprecation" value="on"/>
     <property name="ant.build.javac.source" value="1.6"/>
     <property name="ant.build.javac.target" value="1.6"/>
+
+    <!-- the label gets overridden by CruiseControl and/or during a release -->
+    <property name="label" value="development"/>
 
     <path id="compile.classpath">
         <fileset dir="${lib}">
@@ -43,11 +32,7 @@
     <!-- =================================================================== -->
     <!-- Initialization target                                               -->
     <!-- =================================================================== -->
-    <target name="init" depends="testsupport.init">
-        <tstamp/>
-        <mkdir dir="${classes}"/>
-        <mkdir dir="${logs}"/>
-    </target>
+    <target name="init" depends="buildsupport.init, testsupport.init"/>
 
     <target name="compile" depends="init" description="compiles the source code">
         <javac srcdir="${src}" destdir="${classes}" debug="${debug}"
@@ -67,6 +52,7 @@
                 <attribute name="Implementation-Version" value="${label} (${buildstamp})"/>
                 <attribute name="Implementation-Vendor"
                            value="Institute for Computational Biomedicine (ICB), Weill Medical College of Cornell University"/>
+                <attribute name="Built-By" value="${user.name}"/>
             </manifest>
             <fileset dir="${classes}"/>
             <fileset dir="${config}">
@@ -76,6 +62,8 @@
     </target>
 
     <target name="jar-full" depends="compile" description="Create a jar file for for R Utilities API">
+        <copy file="${config}/log4j.properties.sample" tofile="${classes}/log4j.properties"
+              overwrite="true" failonerror="false"/>
         <jar jarfile="${jarfile}">
             <manifest>
                 <attribute name="Specification-Title" value="R Utilities"/>
@@ -85,16 +73,17 @@
                 <attribute name="Implementation-Vendor"
                            value="Institute for Computational Biomedicine (ICB), Weill Medical College of Cornell University"/>
                 <attribute name="Main-Class" value="edu.cornell.med.icb.R.RUtils"/>
+                <attribute name="Built-By" value="${user.name}"/>
             </manifest>
             <fileset dir="${classes}"/>
             <zipgroupfileset dir="${lib}">
                 <include name="*.jar"/>
             </zipgroupfileset>
             <fileset dir="${config}">
-                <include name="log4j.properties"/>
                 <include name="RConnectionPool.xsd"/>
             </fileset>
         </jar>
+        <delete file="${classes}/log4j.properties" failonerror="false"/>
     </target>
 
     <!-- =================================================================== -->
@@ -123,11 +112,9 @@
         </javadoc>
     </target>
 
-    <target name="clean" depends="testsupport.clean" description="Cleans up the directory">
-        <delete dir="${classes}"/>
-        <delete dir="${javadocs}"/>
-
+    <target name="clean" depends="buildsupport.clean, testsupport.clean" description="Cleans up the directory">
         <delete file="${jarfile}"/>
+        <delete file="${api-jarfile}"/>
     </target>
 
     <target name="distclean">
