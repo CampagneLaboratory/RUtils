@@ -125,6 +125,7 @@ public final class RUtils {
                     commands.add(host);
                 }
 
+                // TODO - this will fail when spaces are in the the path to the executable
                 CollectionUtils.addAll(commands, rServeCommand.split(" "));
                 commands.add("--RS-port");
                 commands.add(Integer.toString(port));

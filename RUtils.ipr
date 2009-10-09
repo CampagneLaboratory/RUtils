@@ -703,7 +703,7 @@
     <output url="file://$PROJECT_DIR$/out" />
   </component>
   <component name="ProjectRunConfigurationManager">
-    <configuration default="false" name="startup" type="Application" factoryName="Application" enabled="false" merge="false" runner="emma">
+    <configuration default="false" name="startup" type="Application" factoryName="Application" enabled="false" merge="false" sample_coverage="true" runner="emma">
       <option name="MAIN_CLASS_NAME" value="edu.cornell.med.icb.R.RUtils" />
       <option name="VM_PARAMETERS" value="" />
       <option name="PROGRAM_PARAMETERS" value="--startup --configuration &quot;C:\Documents and Settings\Marko\My Documents\IdeaProjects\RUtils\config\RConnectionPool.xml&quot;" />
@@ -908,6 +908,13 @@
                 </list>
               </option>
               <option name="trunkUrl" value="https://pbtech-vc.med.cornell.edu/public/svn/icb/trunk" />
+            </SvnBranchConfiguration>
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/../Rserve/src/client">
+          <value>
+            <SvnBranchConfiguration>
+              <option name="trunkUrl" value="https://pbtech-vc.med.cornell.edu/public/svn/icb/3rdparty/Rserve/src/client" />
             </SvnBranchConfiguration>
           </value>
         </entry>

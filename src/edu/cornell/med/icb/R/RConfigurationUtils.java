@@ -18,17 +18,14 @@
 
 package edu.cornell.med.icb.R;
 
+import edu.cornell.med.icb.io.ResourceFinder;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.SystemConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-
-import edu.cornell.med.icb.io.ResourceFinder;
 
 /**
  * Utilities to aid configuration of Rserve instances.
@@ -41,7 +38,7 @@ final class RConfigurationUtils {
 
     /**
      * Name of the system environment property that will set a configuration file to use.
-     * #DEFAULT_CONFIGURATION_FILE will be used if this property is not set.
+     * {@link #DEFAULT_XML_CONFIGURATION_FILE} will be used if this property is not set.
      */
     private static final String DEFAULT_CONFIGURATION_KEY = "RConnectionPool.configuration";
 
@@ -75,7 +72,7 @@ final class RConfigurationUtils {
      */
     static URL getConfigurationURL() {
         URL poolConfigURL; // if the user defined a configuration, use it
-        final ResourceFinder resourceFinder = new ResourceFinder("config");
+        final ResourceFinder resourceFinder = new ResourceFinder(".", "config");
         final Configuration systemConfiguration = new SystemConfiguration();
         if (systemConfiguration.containsKey(DEFAULT_CONFIGURATION_KEY)) {
             final String poolConfig = systemConfiguration.getString(DEFAULT_CONFIGURATION_KEY);
