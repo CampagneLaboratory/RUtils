@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Institute for Computational Biomedicine,
+ * Copyright (C) 2008-2010 Institute for Computational Biomedicine,
  *                         Weill Medical College of Cornell University
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -253,8 +253,7 @@ public final class RUtils {
         validate
     }
 
-    public static void main(final String[] args)
-            throws ParseException, RserveException, ConfigurationException {
+    public static void main(final String[] args) throws ParseException, ConfigurationException {
         final Options options = new Options();
 
         final Option helpOption = new Option("h", "help", false, "Print this message");

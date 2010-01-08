@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Institute for Computational Biomedicine,
+ * Copyright (C) 2008-2010 Institute for Computational Biomedicine,
  *                         Weill Medical College of Cornell University
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -100,7 +100,7 @@ public class RDataObject {
         final int rowLength = src[0].length;
         final double[] dest = new double[numRows * rowLength];
         int pos = 0;
-        for (double[] srcByRow : src) {
+        for (final double[] srcByRow : src) {
             System.arraycopy(srcByRow, 0, dest, pos, rowLength);
             pos += rowLength;
         }
@@ -117,7 +117,7 @@ public class RDataObject {
         final int rowLength = src[0].length;
         final long[] dest = new long[numRows * rowLength];
         int pos = 0;
-        for (long[] srcByRow : src) {
+        for (final long[] srcByRow : src) {
             System.arraycopy(srcByRow, 0, dest, pos, rowLength);
             pos += rowLength;
         }

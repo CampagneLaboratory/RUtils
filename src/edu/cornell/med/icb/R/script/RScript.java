@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2009 Institute for Computational Biomedicine,
+ * Copyright (C) 2008-2010 Institute for Computational Biomedicine,
  *                         Weill Medical College of Cornell University
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -51,7 +51,7 @@ public class RScript {
     private static final Log LOG = LogFactory.getLog(RScript.class);
 
     /** The resource finder. */
-    private static ResourceFinder resourceFinder = new ResourceFinder();
+    private static final ResourceFinder resourceFinder = new ResourceFinder();
 
     /** The R Connection Pool object. */
     private final RConnectionPool connectionPool = RConnectionPool.getInstance();
@@ -309,7 +309,7 @@ public class RScript {
     private void setInputs(final RConnection connection)
             throws RserveException, REngineException {
         assert connection != null;
-        for (RDataObject input : inputMap.values()) {
+        for (final RDataObject input : inputMap.values()) {
             if (input.getDataType() == RDataObjectType.String) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug(String.format(
@@ -372,7 +372,7 @@ public class RScript {
     private void setOutputs(final RConnection connection)
             throws RserveException, REXPMismatchException {
         assert connection != null;
-        for (RDataObject output : outputMap.values()) {
+        for (final RDataObject output : outputMap.values()) {
             final REXP expression = connection.eval(output.getFieldName());
             if (output.getDataType() == RDataObjectType.String) {
                 output.setValue(expression.asString());
@@ -414,13 +414,13 @@ public class RScript {
             throws IOException {
         StringBuilder script = FILENAME_TO_SCRIPT_MAP.get(scriptFilename);
         if (script == null) {
-            URL scriptUrl = resourceFinder.findResource(scriptFilename);
+            final URL scriptUrl = resourceFinder.findResource(scriptFilename);
             if (scriptUrl == null) {
                 throw new IOException("Could not locate R script for filename " + scriptFilename);
             }
             script = new StringBuilder();
             int i = 0;
-            for (String rawLine : new TextFileLineIterator(scriptUrl.openStream())) {
+            for (final String rawLine : new TextFileLineIterator(scriptUrl.openStream())) {
                 final String line = rawLine.trim();
                 if (StringUtils.isBlank(line) || line.startsWith("#")) {
                     continue;
